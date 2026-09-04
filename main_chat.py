@@ -13,4 +13,5 @@ if __name__ == "__main__":
         oneshot,
         builder=build_chat_agent,
         title="纯聊天 Agent 已启动（无工具）。输入问题开始对话，exit / quit 退出。",
+        enable_amap_mcp=False,
     )

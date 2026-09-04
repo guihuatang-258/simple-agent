@@ -17,6 +17,7 @@ def _env_flag(name: str, default: str = "false") -> bool:
 class ChatOpenAICompat(ChatOpenAI):
     """Keep Qwen/DeepSeek reasoning_content that stock ChatOpenAI drops."""
 
+    # 重写父类方法以保留 reasoning_content。
     def _convert_chunk_to_generation_chunk(
         self,
         chunk: dict,
@@ -35,6 +36,7 @@ class ChatOpenAICompat(ChatOpenAI):
         delta = choices[0].get("delta") or {}
         reasoning = ""
         if isinstance(delta, dict):
+            # 兼容openai和其他模型的 reasoning_content 字段。
             reasoning = delta.get(
                 "reasoning_content") or delta.get("reasoning") or ""
         if reasoning:

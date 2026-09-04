@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import sys
 import time
 import uuid
@@ -12,6 +13,7 @@ from dotenv import load_dotenv
 from collections.abc import Callable
 
 from agent import build_agent
+from mcp_tools import load_amap_store_tools
 
 load_dotenv(Path(__file__).resolve().parent / ".env")
 
@@ -59,7 +61,7 @@ def _split_stream_chunk(chunk: object) -> tuple[str, object]:
     return "updates", chunk
 
 
-def _run_turn(agent, user: str, config: dict) -> None:
+async def _run_turn(agent, user: str, config: dict) -> None:
     payload = {"messages": [{"role": "user", "content": user}]}
     ttft = _FirstTokenTimer()
     printed = False
@@ -67,7 +69,7 @@ def _run_turn(agent, user: str, config: dict) -> None:
 
     # 同时订阅 token 消息流和节点更新流：正文可以逐 token 展示，工具调用过程
     # 也能立即反馈。流式输出主要降低用户的感知等待，不会缩短完整生成时间。
-    for chunk in agent.stream(
+    async for chunk in agent.astream(
         payload,
         config=config,
         stream_mode=["messages", "updates"],
@@ -76,14 +78,17 @@ def _run_turn(agent, user: str, config: dict) -> None:
         kind, data = _split_stream_chunk(chunk)
         if kind == "messages":
             token = data[0] if isinstance(data, tuple) else data
-            metadata = data[1] if isinstance(data, tuple) and len(data) > 1 else {}
-            node = metadata.get("langgraph_node") if isinstance(metadata, dict) else None
+            metadata = data[1] if isinstance(
+                data, tuple) and len(data) > 1 else {}
+            node = metadata.get("langgraph_node") if isinstance(
+                metadata, dict) else None
             # tools 节点也会往 messages 流里塞 ToolMessage，不能当成助手正文
             if node == "tools" or getattr(token, "type", "") == "tool":
                 continue
             text = getattr(token, "text", "") or ""
             extra = getattr(token, "additional_kwargs", None) or {}
-            reasoning = extra.get("reasoning_content") or extra.get("reasoning") or ""
+            reasoning = extra.get(
+                "reasoning_content") or extra.get("reasoning") or ""
             if reasoning:
                 if not thinking:
                     print("\n[思考] ", end="", flush=True)
@@ -106,18 +111,11 @@ def _run_turn(agent, user: str, config: dict) -> None:
         print("\n")
 
 
-def chat(
-    prompt: str | None = None,
-    *,
-    builder: Callable = build_agent,
-    title: str = "简易 Agent 已启动。输入问题开始对话，exit / quit 退出。",
-) -> None:
-    # 整个交互会话只构建一次，后续轮次复用模型、连接池与会话记忆。
-    agent = builder()
+async def _chat_loop(agent, prompt: str | None, title: str) -> None:
     config = {"configurable": {"thread_id": str(uuid.uuid4())}}
 
     if prompt:
-        _run_turn(agent, prompt, config)
+        await _run_turn(agent, prompt, config)
         return
 
     print(f"{title}\n")
@@ -133,11 +131,54 @@ def chat(
             print("再见。")
             return
         try:
-            _run_turn(agent, user, config)
+            await _run_turn(agent, user, config)
         except Exception as exc:
             print(f"出错: {exc}", file=sys.stderr)
 
 
+async def _chat(
+    prompt: str | None = None,
+    *,
+    builder: Callable = build_agent,
+    title: str = "简易 Agent 已启动。输入问题开始对话，exit / quit 退出。",
+    enable_amap_mcp: bool = True,
+) -> None:
+    if enable_amap_mcp:
+        # MCP 工具及 stdio 子进程的生命周期覆盖整个聊天会话。
+        async with load_amap_store_tools() as mcp_tools:
+            if not mcp_tools:
+                print(
+                    "[MCP] 未配置 AMAP_MAPS_API_KEY，已跳过高德地图工具。",
+                    file=sys.stderr,
+                )
+            agent = builder(mcp_tools)
+            await _chat_loop(agent, prompt, title)
+        return
+
+    # 纯聊天模式不启动 MCP Server，用来测量没有工具开销时的模型延迟。
+    await _chat_loop(builder(), prompt, title)
+
+
+def chat(
+    prompt: str | None = None,
+    *,
+    builder: Callable = build_agent,
+    title: str = "简易 Agent 已启动。输入问题开始对话，exit / quit 退出。",
+    enable_amap_mcp: bool = True,
+) -> None:
+    """同步 CLI 入口；内部事件循环用于模型和 MCP 工具的异步流式调用。"""
+
+    asyncio.run(
+        _chat(
+            prompt,
+            builder=builder,
+            title=title,
+            enable_amap_mcp=enable_amap_mcp,
+        )
+    )
+
+
 if __name__ == "__main__":
+    # oneshot模式，即命令行直接传入问题，程序会在回答后退出。
     oneshot = " ".join(sys.argv[1:]).strip() or None
     chat(oneshot)
