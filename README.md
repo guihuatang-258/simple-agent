@@ -59,6 +59,13 @@ START -> LLM intent router
 `pending_intent` 保存等待地址或等待转人工确认的跨轮状态。用户说“再见”后，
 Graph 设置 `conversation_ended=true`，CLI 结束当前会话。
 
+命令行每轮回答后会打印实际 LangGraph 执行路径，并附带路由决策、回复来源和
+命中的规则 ID，例如：
+
+```text
+[执行路径] START -> route(decision=rule, rule_id=rental-process-concern) -> rule(source=regex_rule, rule_id=rental-process-concern) -> END
+```
+
 ## 网点和营销数据
 
 POC 租车网点保存在 `data/branches.json`。入口判定为网点查询后，Graph 直接调用

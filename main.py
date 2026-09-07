@@ -55,6 +55,42 @@ def _print_tool_updates(data: dict) -> None:
                 print(f"[result] {name}: {content}")
 
 
+def _execution_path_label(node: str, update: object) -> str:
+    """Build a compact label from one real LangGraph node update."""
+
+    if not isinstance(update, dict):
+        return node
+
+    details: list[str] = []
+    if node == "route":
+        decision = update.get("route")
+        if decision:
+            details.append(f"decision={decision}")
+        matched_rule_id = update.get("matched_rule_id")
+        if matched_rule_id:
+            details.append(f"rule_id={matched_rule_id}")
+    else:
+        messages = update.get("messages", [])
+        if messages:
+            metadata = getattr(messages[-1], "additional_kwargs", None) or {}
+            source = metadata.get("response_source")
+            rule_id = metadata.get("rule_id")
+            if source:
+                details.append(f"source={source}")
+            if rule_id:
+                details.append(f"rule_id={rule_id}")
+
+    return f"{node}({', '.join(details)})" if details else node
+
+
+def _append_execution_path(data: dict, path: list[str]) -> None:
+    """Record nodes in the order their LangGraph updates are emitted."""
+
+    for node, update in data.items():
+        if not node.startswith("__"):
+            path.append(_execution_path_label(node, update))
+
+
 def _split_stream_chunk(chunk: object) -> tuple[str, object]:
     if isinstance(chunk, dict) and "type" in chunk:
         return chunk["type"], chunk.get("data")
@@ -80,6 +116,7 @@ async def _run_turn(agent, user: str, config: dict) -> bool:
     ttft = _FirstTokenTimer()
     printed = False
     thinking = False
+    execution_path = ["START"]
 
     # 同时订阅 token 消息流和节点更新流：正文可以逐 token 展示，工具调用过程
     # 也能立即反馈。流式输出主要降低用户的感知等待，不会缩短完整生成时间。
@@ -123,6 +160,7 @@ async def _run_turn(agent, user: str, config: dict) -> bool:
                     printed = True
                 print(text, end="", flush=True)
         elif kind == "updates" and isinstance(data, dict):
+            _append_execution_path(data, execution_path)
             _print_tool_updates(data)
 
     snapshot = await agent.aget_state(config)
@@ -141,6 +179,8 @@ async def _run_turn(agent, user: str, config: dict) -> bool:
             ttft.mark()
             print(f"\n助手: {final_text}", end="", flush=True)
             printed = True
+    execution_path.append("END")
+    print(f"\n[执行路径] {' -> '.join(execution_path)}", flush=True)
     if printed or thinking:
         print("\n")
     return bool(values.get("conversation_ended", False))
