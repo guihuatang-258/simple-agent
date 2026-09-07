@@ -37,6 +37,7 @@ DEFAULT_TOOLS = [
 _NATIVE_PROVIDERS = {"dashscope", "tongyi", "qwen"}
 _INTENTS = {"branch_query", "human_handoff", "faq", "goodbye"}
 _HANDOFF_DECISIONS = {"confirmed", "declined", "unknown"}
+# 该规则描述的是网点地址/电话，但实际查询必须走定位和网点工具，不能由 FAQ 返回。
 _NON_FAQ_RULE_IDS = {"branch-location-or-phone"}
 
 
@@ -100,6 +101,7 @@ async def _model_json(model, system_prompt: str, user_prompt: str) -> dict[str, 
 async def _route_request(state: CustomerServiceState, *, model) -> dict[str, Any]:
     user_text = _latest_user_text(state)
     pending = state.get("pending_intent")
+    # 入口模型只做意图分类和槽位提取。只有判定为 FAQ 后，才允许进入规则链路。
     classifier_input = json.dumps(
         {
             "user_message": user_text,
@@ -174,6 +176,8 @@ async def _route_request(state: CustomerServiceState, *, model) -> dict[str, Any
             "handoff_decision": None,
         }
 
+    # 第一层是确定性正则：一旦命中就直接由 rule 节点读取标准话术，
+    # 不再调用回答模型。专用网点规则在这里显式排除。
     rule = match_dialogue_rule(user_text, exclude_rule_ids=_NON_FAQ_RULE_IDS)
     if rule:
         return {
@@ -184,6 +188,7 @@ async def _route_request(state: CustomerServiceState, *, model) -> dict[str, Any
             "extracted_address": None,
             "handoff_decision": None,
         }
+    # 正则没有覆盖到的 FAQ 才进入受限语义兜底，而不是把整份话术交给 LLM。
     return {
         "route": "fallback",
         "matched_rule_id": None,
@@ -250,12 +255,15 @@ def _handoff_node(state: CustomerServiceState) -> dict[str, Any]:
 
 
 def _rule_node(state: CustomerServiceState) -> dict[str, Any]:
+    # route 节点只在状态中传递命中的 ID；这里重新从本地规则库读取受审答案。
     rule = get_rule(state.get("matched_rule_id") or "")
     if not rule:
+        # 防御配置热更新或状态异常导致 ID 失效，禁止在缺少标准话术时自由生成。
         return {
             "messages": [AIMessage(content="暂时没有找到对应话术，需要我为您转接人工客服吗？")],
             "pending_intent": "handoff_confirmation",
         }
+    # 回复内容完全来自 JSON 配置，metadata 仅用于 CLI 调试和链路追踪。
     return {
         "messages": [
             AIMessage(
@@ -429,6 +437,8 @@ async def _fallback_node(
     model,
 ) -> dict[str, Any]:
     user_text = _latest_user_text(state)
+    # 第二层先用本地词法分数将完整规则库缩小为最多三条候选。
+    # 候选不含 answer，因此标准话术不会作为上下文发送给模型。
     candidates = retrieve_rule_candidates(
         user_text,
         limit=3,
@@ -440,6 +450,7 @@ async def _fallback_node(
     )
     rule_id = None
     try:
+        # 第三层 LLM 只充当候选复核器：可以选一个 ID，也可以用 null 拒识。
         decision = await _model_json(
             model,
             """你是受限的客服话术语义匹配器，不负责回答用户问题。候选最多三条，
@@ -449,12 +460,15 @@ async def _fallback_node(
             prompt,
         )
         selected = decision.get("rule_id")
+        # 不信任模型直接返回的 ID，只接受本轮候选白名单内的值。
         allowed_ids = {candidate["id"] for candidate in candidates}
         if isinstance(selected, str) and selected in allowed_ids:
             rule_id = selected
     except Exception:
+        # 模型调用失败或 JSON 不合法时按未命中处理，避免生成未经审核的答案。
         rule_id = None
 
+    # 复核通过后由代码回读本地标准话术；LLM 从始至终不负责组织客服答案。
     rule = get_rule(rule_id) if rule_id else None
     if rule:
         return {
