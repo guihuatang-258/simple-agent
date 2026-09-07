@@ -84,7 +84,7 @@ def _parse_json_object(text: str) -> dict[str, Any]:
     if start < 0 or end < start:
         return {}
     try:
-        parsed = json.loads(candidate[start : end + 1])
+        parsed = json.loads(candidate[start: end + 1])
     except json.JSONDecodeError:
         return {}
     return parsed if isinstance(parsed, dict) else {}
@@ -92,7 +92,8 @@ def _parse_json_object(text: str) -> dict[str, Any]:
 
 async def _model_json(model, system_prompt: str, user_prompt: str) -> dict[str, Any]:
     response = await model.ainvoke(
-        [SystemMessage(content=system_prompt), HumanMessage(content=user_prompt)],
+        [SystemMessage(content=system_prompt),
+         HumanMessage(content=user_prompt)],
         config={"tags": ["internal-routing"]},
     )
     return _parse_json_object(_message_text(response))
@@ -361,7 +362,8 @@ def _branch_response(result: dict[str, Any]) -> tuple[str, str | None]:
             ]
         )
         marketing = json.loads(
-            get_compliant_marketing_message.invoke({"scenario": "branch_query"})
+            get_compliant_marketing_message.invoke(
+                {"scenario": "branch_query"})
         )
         if marketing.get("should_speak") and marketing.get("message"):
             lines.extend(["", marketing["message"]])
@@ -378,7 +380,8 @@ async def _branch_node(
 ) -> dict[str, Any]:
     user_text = _latest_user_text(state)
     pending = state.get("pending_intent") == "branch_address"
-    address = state.get("extracted_address") or _heuristic_address(user_text, pending)
+    address = state.get("extracted_address") or _heuristic_address(
+        user_text, pending)
     if not address:
         return {
             "messages": [AIMessage(content="请告诉我您当前所在的详细地址或附近地标。")],
@@ -525,6 +528,7 @@ def build_agent(tools: Sequence[BaseTool] = (), *, model=None):
     workflow.add_edge(START, "route")
     workflow.add_conditional_edges(
         "route",
+        # 根据 route 节点的输出决定下一步走向，dict key为 route 的值，value为对应的节点名
         lambda state: state["route"],
         {
             "goodbye": "goodbye",
