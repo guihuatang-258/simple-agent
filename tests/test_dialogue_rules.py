@@ -1,0 +1,144 @@
+from __future__ import annotations
+
+import asyncio
+import json
+import unittest
+import uuid
+
+from langchain.tools import tool
+from langchain_core.messages import AIMessage
+
+from agent import build_agent
+from dialogue_rules import (
+    get_rule,
+    iter_rules,
+    load_dialogue_rules,
+    match_dialogue_rule,
+    retrieve_rule_candidates,
+)
+
+
+class FakeModel:
+    def __init__(self, responses: list[str] | None = None):
+        self.calls = 0
+        self.responses = list(responses or [])
+
+    async def ainvoke(self, messages, config=None):
+        del messages, config
+        self.calls += 1
+        content = self.responses.pop(0) if self.responses else '{"rule_id": null}'
+        return AIMessage(content=content)
+
+
+def invoke(graph, text: str, thread_id: str | None = None):
+    config = {"configurable": {"thread_id": thread_id or uuid.uuid4().hex}}
+    return asyncio.run(
+        graph.ainvoke({"messages": [{"role": "user", "content": text}]}, config=config)
+    )
+
+
+class DialogueRuleTests(unittest.TestCase):
+    def test_first_three_categories_and_eleven_rules_are_loaded(self):
+        data = load_dialogue_rules()
+        self.assertEqual(len(data["categories"]), 3)
+        self.assertEqual(len(list(iter_rules())), 11)
+        self.assertTrue(all(len(rule["patterns"]) >= 3 for rule in iter_rules()))
+
+    def test_regex_matches_each_category(self):
+        samples = {
+            "第一次租车，流程会不会很麻烦还要排队": "rental-process-concern",
+            "异地还车费为什么这么贵": "one-way-return-fee-high",
+            "跑长途车坏了有没有道路救援": "long-distance-breakdown",
+        }
+        for question, expected in samples.items():
+            with self.subTest(question=question):
+                self.assertEqual(match_dialogue_rule(question)["id"], expected)
+
+    def test_candidate_retrieval_never_exposes_answers(self):
+        candidates = retrieve_rule_candidates("车在半路坏了怎么办", limit=3)
+        self.assertLessEqual(len(candidates), 3)
+        self.assertTrue(all("answer" not in candidate for candidate in candidates))
+
+
+class CustomerServiceGraphTests(unittest.TestCase):
+    def test_regex_rule_response_does_not_call_model(self):
+        model = FakeModel()
+        graph = build_agent([], model=model)
+        result = invoke(graph, "第一次租车，流程会不会很麻烦还要排队")
+        final = result["messages"][-1]
+        self.assertEqual(final.content, get_rule("rental-process-concern")["answer"])
+        self.assertEqual(final.additional_kwargs["response_source"], "regex_rule")
+        self.assertEqual(model.calls, 0)
+
+    def test_bounded_fallback_selects_configured_answer(self):
+        model = FakeModel(['{"rule_id":"long-distance-breakdown"}'])
+        graph = build_agent([], model=model)
+        result = invoke(graph, "长距离自驾时车半路趴窝会有人处理吗")
+        final = result["messages"][-1]
+        self.assertEqual(final.content, get_rule("long-distance-breakdown")["answer"])
+        self.assertEqual(
+            final.additional_kwargs["response_source"], "bounded_semantic_fallback"
+        )
+        self.assertEqual(model.calls, 1)
+
+    def test_unmatched_fallback_then_confirmed_handoff(self):
+        model = FakeModel(['{"rule_id":null}'])
+        graph = build_agent([], model=model)
+        thread_id = uuid.uuid4().hex
+        first = invoke(graph, "我的发票什么时候开", thread_id)
+        self.assertEqual(first["pending_intent"], "handoff_confirmation")
+        second = invoke(graph, "好的", thread_id)
+        final = second["messages"][-1]
+        self.assertEqual(final.additional_kwargs["response_source"], "handoff")
+        self.assertEqual(model.calls, 1)
+
+    def test_goodbye_marks_conversation_ended(self):
+        graph = build_agent([], model=FakeModel())
+        result = invoke(graph, "谢谢，再见")
+        self.assertTrue(result["conversation_ended"])
+        self.assertEqual(result["messages"][-1].content, "感谢您的咨询，再见。")
+
+    def test_branch_address_is_collected_across_turns(self):
+        @tool
+        def maps_geo(address: str, city: str = "") -> str:
+            """Test geocoder."""
+            del address, city
+            return json.dumps(
+                {"return": [{"location": "117.050646,39.050010"}]},
+                ensure_ascii=False,
+            )
+
+        model = FakeModel(['{"address":""}'])
+        graph = build_agent([maps_geo], model=model)
+        thread_id = uuid.uuid4().hex
+        first = invoke(graph, "帮我查一下最近的网点", thread_id)
+        self.assertEqual(first["pending_intent"], "branch_address")
+        second = invoke(graph, "天津南站", thread_id)
+        final = second["messages"][-1]
+        self.assertEqual(final.additional_kwargs["response_source"], "branch_workflow")
+        self.assertIn("天津南站服务点", final.content)
+        self.assertEqual(model.calls, 1)
+
+    def test_semantic_branch_match_returns_to_branch_workflow(self):
+        @tool
+        def maps_geo(address: str, city: str = "") -> str:
+            """Test geocoder."""
+            del address, city
+            return json.dumps({"return": [{"location": "117.050646,39.050010"}]})
+
+        model = FakeModel(
+            [
+                '{"rule_id":"branch-location-or-phone"}',
+                '{"address":"天津南站"}',
+            ]
+        )
+        graph = build_agent([maps_geo], model=model)
+        result = invoke(graph, "天津南站周围可以办理提车吗")
+        final = result["messages"][-1]
+        self.assertEqual(final.additional_kwargs["response_source"], "branch_workflow")
+        self.assertIn("天津南站服务点", final.content)
+        self.assertLessEqual(model.calls, 2)
+
+
+if __name__ == "__main__":
+    unittest.main()

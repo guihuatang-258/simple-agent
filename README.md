@@ -1,14 +1,16 @@
 # simple-agent
 
-用 LangChain v1 最新 API（`create_agent`）搭的简易工具调用 Agent。
+面向租车客服 POC 的显式 LangGraph 工作流。
 
 ## 能力
 
-- 模型循环 + 工具调用：`langchain.agents.create_agent`
-- 多轮记忆：`InMemorySaver` + `thread_id`
-- 工具调用示例：当前时间、天气（本地演示数据）、高德官方 MCP 周边门店查询
-- 千问默认走 DashScope 原生 `Generation.call`（与 Dify 官方插件同一条口）
-- 其它厂商仍可用 OpenAI 兼容接口
+- 显式路由：网点查询、转人工、正则话术、受限语义兜底、结束会话
+- 多轮状态：`InMemorySaver` + `thread_id`
+- 高德官方 MCP 地址解析
+- POC 网点服务：预设网点距离排序、营业判断、合规旺季话术
+- 规则话术：Excel 前三个类别共 11 条，每条支持多条正则
+- 受限兜底：本地召回 Top-3 候选，LLM 只选规则 ID，代码返回标准话术
+- 千问默认走 DashScope 原生 `Generation.call`，其它厂商可用 OpenAI 兼容接口
 
 ## 启动
 
@@ -19,67 +21,76 @@ pip install -r requirements.txt -i https://pypi.org/simple
 copy .env.example .env
 ```
 
-国内镜像可能还没有 LangChain 1.4 稳定版，建议用上面的官方源。当前已验证：`langchain==1.4.0`、`langchain-openai==1.6.0`。
+国内镜像可能还没有 LangChain 1.4 稳定版，建议使用官方源。当前已验证
+`langchain==1.4.0`、`langchain-openai==1.6.0`。
 
-编辑 `.env`，千问填 `DASHSCOPE_API_KEY`（或沿用 `OPENAI_API_KEY`），`MODEL_PROVIDER=dashscope`。
+编辑 `.env`，千问填 `DASHSCOPE_API_KEY`（或沿用 `OPENAI_API_KEY`），并设置
+`MODEL_PROVIDER=dashscope`。其它兼容接口把 `MODEL_PROVIDER` 改成 `openai`，
+并填写 `OPENAI_BASE_URL`。
 
-如需根据用户地址查询周边门店，还需申请高德“Web 服务 API”类型的 Key，并在 `.env` 中设置 `AMAP_MAPS_API_KEY`。程序通过 `npx -y @amap/amap-maps-mcp-server` 启动高德官方 MCP Server，因此还需安装 Node.js 22.14 或更高版本。门店搜索支持品牌或类型关键词，例如“星巴克”“便利店”；未配置 Key 时会跳过地图工具，不影响其它能力。
+网点查询需要高德“Web 服务 API”类型的 Key，并在 `.env` 中设置
+`AMAP_MAPS_API_KEY`。程序通过 `npx -y @amap/amap-maps-mcp-server` 启动高德
+官方 MCP Server，因此还需安装 Node.js 22.14 或更高版本。未配置 Key 时会跳过
+地图工具，规则话术和转人工流程仍可使用。
 
-其它兼容接口把 `MODEL_PROVIDER` 改成 `openai` 并填 `OPENAI_BASE_URL`。
+## 对话路由
 
-每次用户提问默认最多执行 10 个工具、调用模型 6 次，可在 `.env` 调整：
+每条用户消息都会从 Graph 的 `START` 重新进入：
 
-```env
-AGENT_MAX_TOOL_CALLS=10
-AGENT_MAX_LOOPS=6
+```text
+START -> route -> branch / handoff / rule / fallback / goodbye -> END
 ```
 
-多个并行工具调用会分别计数。`AGENT_MAX_LOOPS` 统计模型调用：首次进入模型为
-第 1 次，每轮工具执行结束后再次进入模型会再加 1；下一条用户消息重新计数。
-达到工具上限后，额外工具会被阻止，模型可以利用已有结果继续回答；达到循环
-上限后，当前运行直接结束。这两个值必须是大于等于 1 的整数。
+`route` 先确定性识别网点查询、转人工和再见，再执行正则话术。规则命中时完全
+不调用 LLM，直接返回 `data/dialogue_rules.json` 中的标准口径。当前前三个类别
+来自“网点查询营销话术.xlsx”的“营销话术”页：租车条件、要素查询、车况与服务。
 
-腾讯位置服务 MCP 可与高德同时启用。在 `.env` 中设置 `TENCENT_MAPS_API_KEY`，
-该 Key 需开通 WebServiceAPI 且拥有相关接口配额。腾讯通过远程 Streamable HTTP
-地址 `https://mcp.map.qq.com/mcp` 接入，无需 Node.js；加载工具时即会联网握手。
-参考[腾讯官方接入说明](https://lbs.qq.com/service/MCPServer/MCPServerGuide/userGuide)。
+正则未命中时，本地字符相似度和关键词检索只召回最多三条候选主题，候选答案不
+发送给模型。LLM 只能返回一个候选规则 ID 或 `null`；代码校验 ID 后读取标准口径。
+没有可靠匹配时，系统说明当前支持范围并询问是否转人工。
 
-腾讯工具动态发现并以 `tencent_` 前缀注册，避免与高德工具重名。可设置
-`TENCENT_MCP_FORMAT=0`（默认，语义化文本）或 `1`（原始 JSON）。Key 由程序
-按官方要求放入连接 URL，请勿在日志中输出完整连接配置。
-未配置某一家 Key 时跳过该服务；配置后连接失败会报错。纯聊天模式不连接地图 MCP。
+`pending_intent` 保存等待地址或等待转人工确认的跨轮状态。用户说“再见”后，
+Graph 设置 `conversation_ended=true`，CLI 结束当前会话。
 
-```powershell
-python main.py "用腾讯地图查深圳市南山区腾讯滨海大厦附近的星巴克"
-```
+## 网点和营销数据
 
-带工具：
+POC 租车网点保存在 `data/branches.json`。Graph 先通过高德把用户当前地址转换为
+GCJ-02 坐标，再由本地代码完成距离排序和营业判断。营销开关及审核话术保存在
+`data/marketing_policy.json`。
 
-默认工具在 `agent.py` 的 `DEFAULT_TOOLS` 列表中选择。高德与腾讯分别为
-`load_amap_store_tools`、`load_tencent_tools`，删除哪一项就不会连接对应服务。
-也可以在 Python 中通过 `chat` 的 `tools` 参数指定（加载函数不要加括号）：
+两个示例网点尚未提供联系电话，因此对应字段为 `null`，程序不会生成虚构号码。
+`request_human_handoff` 当前只生成带请求 ID 的 POC 转接事件，并且要求用户明确
+选择转人工；它尚未连接真实呼叫中心或在线客服平台。
+
+## 地图工具选择
+
+默认地图服务在 `agent.py` 的 `DEFAULT_TOOLS` 中选择。高德与腾讯分别为
+`load_amap_store_tools`、`load_tencent_tools`。也可以通过 `chat` 的 `tools` 参数
+指定，加载函数不要加括号：
 
 ```python
 from main import chat
 from mcp_tools import load_amap_store_tools, load_tencent_tools
-from tools import get_current_time
 
-chat(tools=[get_current_time, load_amap_store_tools])  # 只选高德
-# chat(tools=[get_current_time, load_tencent_tools])  # 只选腾讯
-# chat(tools=[load_amap_store_tools, load_tencent_tools])  # 两者都选
-# chat(tools=[])  # 不加载任何工具
+chat(tools=[load_amap_store_tools])
+# chat(tools=[load_tencent_tools])
+# chat(tools=[load_amap_store_tools, load_tencent_tools])
+# chat(tools=[])
 ```
 
-每个 MCP 加载入口代表一组远程工具，加载后才展开为 `BaseTool` 列表传给
-`create_agent(tools=...)`。直接调用 `build_agent(tools=...)` 时需传已加载的工具，
-不能传加载函数。
+腾讯位置服务需要在 `.env` 中设置 `TENCENT_MAPS_API_KEY`。该 Key 需开通
+WebServiceAPI 并具有相关接口配额。可设置 `TENCENT_MCP_FORMAT=0`（语义化文本）
+或 `1`（原始 JSON）。
+
+## 运行示例
 
 ```powershell
 python main.py
-python main.py 北京现在几点，再算一下 23*17
+python main.py "天津南站附近哪个网点最近？"
+python main.py "异地还车费为什么这么贵？"
 ```
 
-纯聊天（不绑工具，用来对比首 token）：
+纯聊天模式不加载地图和客服规则，可用于比较模型首 token：
 
 ```powershell
 python main_chat.py

@@ -19,6 +19,7 @@ from mcp_tools import MCPToolLoader, load_selected_tools
 load_dotenv(Path(__file__).resolve().parent / ".env")
 
 if sys.platform == "win32":
+    sys.stdin.reconfigure(encoding="utf-8")
     sys.stdout.reconfigure(encoding="utf-8")
     sys.stderr.reconfigure(encoding="utf-8")
 
@@ -62,7 +63,19 @@ def _split_stream_chunk(chunk: object) -> tuple[str, object]:
     return "updates", chunk
 
 
-async def _run_turn(agent, user: str, config: dict) -> None:
+def _message_text(message: object) -> str:
+    content = getattr(message, "content", "") or ""
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        return "".join(
+            str(item.get("text", "")) if isinstance(item, dict) else str(item)
+            for item in content
+        )
+    return str(content)
+
+
+async def _run_turn(agent, user: str, config: dict) -> bool:
     payload = {"messages": [{"role": "user", "content": user}]}
     ttft = _FirstTokenTimer()
     printed = False
@@ -81,6 +94,10 @@ async def _run_turn(agent, user: str, config: dict) -> None:
             token = data[0] if isinstance(data, tuple) else data
             metadata = data[1] if isinstance(
                 data, tuple) and len(data) > 1 else {}
+            tags = metadata.get("tags", []) if isinstance(metadata, dict) else []
+            # 地址抽取和语义兜底模型只返回内部JSON，不能流式展示给用户。
+            if "internal-routing" in tags:
+                continue
             node = metadata.get("langgraph_node") if isinstance(
                 metadata, dict) else None
             # tools 节点也会往 messages 流里塞 ToolMessage，不能当成助手正文
@@ -108,8 +125,25 @@ async def _run_turn(agent, user: str, config: dict) -> None:
         elif kind == "updates" and isinstance(data, dict):
             _print_tool_updates(data)
 
+    snapshot = await agent.aget_state(config)
+    values = snapshot.values if snapshot else {}
+    if not printed:
+        final_message = next(
+            (
+                message
+                for message in reversed(values.get("messages", []))
+                if getattr(message, "type", "") == "ai"
+            ),
+            None,
+        )
+        final_text = _message_text(final_message) if final_message else ""
+        if final_text:
+            ttft.mark()
+            print(f"\n助手: {final_text}", end="", flush=True)
+            printed = True
     if printed or thinking:
         print("\n")
+    return bool(values.get("conversation_ended", False))
 
 
 async def _chat_loop(agent, prompt: str | None, title: str) -> None:
@@ -132,7 +166,9 @@ async def _chat_loop(agent, prompt: str | None, title: str) -> None:
             print("再见。")
             return
         try:
-            await _run_turn(agent, user, config)
+            ended = await _run_turn(agent, user, config)
+            if ended:
+                return
         except Exception as exc:
             print(f"出错: {exc}", file=sys.stderr)
 

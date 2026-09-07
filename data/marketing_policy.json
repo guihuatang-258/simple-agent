@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "peak_season": true,
+  "scenarios": {
+    "branch_query": {
+      "enabled": true,
+      "message": "温馨提示：当前处于出行旺季，建议您尽早前往APP查看可订车型并完成订车，具体车型和库存请以APP实时展示为准。"
+    }
+  },
+  "compliance": {
+    "must_use_verbatim": true,
+    "rules": [
+      "不得在没有实时库存依据时宣称具体车型库存紧张或即将售罄",
+      "不得承诺车辆、价格、优惠或预订结果",
+      "车型、库存和价格以APP实时展示为准"
+    ]
+  }
+}

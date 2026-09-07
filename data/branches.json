@@ -1,0 +1,54 @@
+{
+  "version": 1,
+  "coordinate_system": "GCJ-02",
+  "branches": [
+    {
+      "id": "tianjin-south-station",
+      "name": "天津南站服务点",
+      "full_address": "天津市西青区张家窝镇瑞雪路8号7号楼101商铺",
+      "short_address": "西青区张家窝镇瑞雪路8号7号楼101商铺",
+      "phone": null,
+      "longitude": 117.055065,
+      "latitude": 39.053851,
+      "coordinate_accuracy": "高德道路级近似坐标，POC阶段使用",
+      "is_24_hours": false,
+      "business_hours": {
+        "timezone": "Asia/Shanghai",
+        "weekly": {
+          "monday": [{"open": "08:00", "close": "21:00"}],
+          "tuesday": [{"open": "08:00", "close": "21:00"}],
+          "wednesday": [{"open": "08:00", "close": "21:00"}],
+          "thursday": [{"open": "08:00", "close": "21:00"}],
+          "friday": [{"open": "08:00", "close": "21:00"}],
+          "saturday": [{"open": "08:00", "close": "21:00"}],
+          "sunday": [{"open": "08:00", "close": "21:00"}]
+        },
+        "special_hours": {}
+      }
+    },
+    {
+      "id": "jinghai-sports-university-self-service",
+      "name": "静海体育学院自助点",
+      "full_address": "天津市静海区北华北路与东海道交口西侧尚客优精选酒店前停车场",
+      "short_address": "静海区北华北路与东海道交口西侧尚客优精选酒店前停车场",
+      "phone": null,
+      "longitude": 117.063901,
+      "latitude": 38.959319,
+      "coordinate_accuracy": "高德道路交叉口级近似坐标，POC阶段使用",
+      "is_24_hours": false,
+      "business_hours": {
+        "timezone": "Asia/Shanghai",
+        "weekly": {
+          "monday": [{"open": "09:00", "close": "21:00"}],
+          "tuesday": [{"open": "09:00", "close": "21:00"}],
+          "wednesday": [{"open": "09:00", "close": "21:00"}],
+          "thursday": [{"open": "09:00", "close": "21:00"}],
+          "friday": [{"open": "09:00", "close": "21:00"}],
+          "saturday": [{"open": "09:00", "close": "21:00"}],
+          "sunday": [{"open": "09:00", "close": "21:00"}]
+        },
+        "special_hours": {}
+      }
+    }
+  ]
+}
