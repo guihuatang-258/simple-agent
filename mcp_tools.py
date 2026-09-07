@@ -5,8 +5,9 @@ from __future__ import annotations
 import os
 import shutil
 import sys
-from collections.abc import AsyncGenerator
-from contextlib import asynccontextmanager
+from collections.abc import AsyncGenerator, Callable, Sequence
+from contextlib import AbstractAsyncContextManager, AsyncExitStack, asynccontextmanager
+from urllib.parse import urlencode
 
 from langchain_core.tools import BaseTool
 from langchain_mcp_adapters.client import MultiServerMCPClient
@@ -75,4 +76,69 @@ async def load_amap_store_tools() -> AsyncGenerator[list[BaseTool]]:
             )
         # 将选中的工具提供给调用者，整个聊天会话期间保持同一个 MCP 子进程。
         # yield保持session存活
+        yield selected
+
+
+def _tencent_connection() -> dict | None:
+    """按腾讯官方文档构造远程 MCP 配置；未配置 Key 时跳过。"""
+    key = os.getenv("TENCENT_MAPS_API_KEY", "").strip()
+    if not key:
+        return None
+    result_format = os.getenv("TENCENT_MCP_FORMAT", "0").strip()
+    if result_format not in {"0", "1"}:
+        raise ValueError("TENCENT_MCP_FORMAT 必须为 0（文本）或 1（原始 JSON）。")
+    return {
+        "transport": "streamable_http",
+        "url": "https://mcp.map.qq.com/mcp?" + urlencode(
+            {"key": key, "format": result_format}
+        ),
+        "timeout": 15,
+        "sse_read_timeout": 60,
+    }
+
+
+@asynccontextmanager
+async def load_tencent_tools() -> AsyncGenerator[list[BaseTool]]:
+    """连接腾讯远程 MCP，发现工具并保持会话直到调用者退出。"""
+    connection = _tencent_connection()
+    if connection is None:
+        yield []
+        return
+    client = MultiServerMCPClient({"tencent": connection})
+    # URL 内含 Key，不输出 connection 或原始网络异常。
+    async with AsyncExitStack() as stack:
+        try:
+            session = await stack.enter_async_context(client.session("tencent"))
+            discovered = await load_mcp_tools(
+                session, server_name="tencent", tool_name_prefix=True,
+            )
+            if not discovered:
+                raise RuntimeError("腾讯 MCP 未返回可用工具。")
+        except Exception:
+            raise RuntimeError(
+                "腾讯 MCP 初始化失败，请检查网络、TENCENT_MAPS_API_KEY、"
+                "WebServiceAPI 权限及调用配额。"
+            ) from None
+        yield discovered
+
+
+MCPToolLoader = Callable[[], AbstractAsyncContextManager[list[BaseTool]]]
+
+
+@asynccontextmanager
+async def load_selected_tools(
+    tools: Sequence[BaseTool | MCPToolLoader],
+) -> AsyncGenerator[list[BaseTool]]:
+    """只连接 tools 中选择的 MCP 服务，并合并本地工具。"""
+    async with AsyncExitStack() as stack:
+        selected = []
+        for entry in tools:
+            if isinstance(entry, BaseTool):
+                selected.append(entry)
+            else:
+                # 加载函数只在被选中时执行，其 Session 保持到聊天结束。
+                loaded = await stack.enter_async_context(entry())
+                if not loaded:
+                    print(f"[MCP] {entry.__name__} 未加载工具，请检查对应 Key 配置。", file=sys.stderr)
+                selected.extend(loaded)
         yield selected

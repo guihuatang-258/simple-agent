@@ -10,10 +10,11 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
+from langchain_core.tools import BaseTool
 
-from agent import build_agent
-from mcp_tools import load_amap_store_tools
+from agent import DEFAULT_TOOLS, build_agent
+from mcp_tools import MCPToolLoader, load_selected_tools
 
 load_dotenv(Path(__file__).resolve().parent / ".env")
 
@@ -141,22 +142,13 @@ async def _chat(
     *,
     builder: Callable = build_agent,
     title: str = "简易 Agent 已启动。输入问题开始对话，exit / quit 退出。",
-    enable_amap_mcp: bool = True,
+    tools: Sequence[BaseTool | MCPToolLoader] | None = None,
 ) -> None:
-    if enable_amap_mcp:
-        # MCP 工具及 stdio 子进程的生命周期覆盖整个聊天会话。
-        async with load_amap_store_tools() as mcp_tools:
-            if not mcp_tools:
-                print(
-                    "[MCP] 未配置 AMAP_MAPS_API_KEY，已跳过高德地图工具。",
-                    file=sys.stderr,
-                )
-            agent = builder(mcp_tools)
-            await _chat_loop(agent, prompt, title)
-        return
-
-    # 纯聊天模式不启动 MCP Server，用来测量没有工具开销时的模型延迟。
-    await _chat_loop(builder(), prompt, title)
+    # [] 表示不加载工具；None 使用 agent.py 中的默认配置。
+    selection = DEFAULT_TOOLS if tools is None else tools
+    async with load_selected_tools(selection) as loaded_tools:
+        agent = builder(loaded_tools)
+        await _chat_loop(agent, prompt, title)
 
 
 def chat(
@@ -164,7 +156,7 @@ def chat(
     *,
     builder: Callable = build_agent,
     title: str = "简易 Agent 已启动。输入问题开始对话，exit / quit 退出。",
-    enable_amap_mcp: bool = True,
+    tools: Sequence[BaseTool | MCPToolLoader] | None = None,
 ) -> None:
     """同步 CLI 入口；内部事件循环用于模型和 MCP 工具的异步流式调用。"""
 
@@ -173,7 +165,7 @@ def chat(
             prompt,
             builder=builder,
             title=title,
-            enable_amap_mcp=enable_amap_mcp,
+            tools=tools,
         )
     )
 
