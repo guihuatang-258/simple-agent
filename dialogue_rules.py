@@ -61,21 +61,32 @@ def get_rule(rule_id: str) -> dict[str, Any] | None:
     return next((rule for rule in iter_rules() if rule["id"] == rule_id), None)
 
 
-def match_dialogue_rule(user_text: str) -> dict[str, Any] | None:
+def match_dialogue_rule(
+    user_text: str,
+    exclude_rule_ids: set[str] | None = None,
+) -> dict[str, Any] | None:
     normalized = normalize_text(user_text)
     for rule in iter_rules():
+        if exclude_rule_ids and rule["id"] in exclude_rule_ids:
+            continue
         if any(re.search(pattern, normalized, re.IGNORECASE) for pattern in rule["patterns"]):
             return rule
     return None
 
 
-def retrieve_rule_candidates(user_text: str, limit: int = 3) -> list[dict[str, Any]]:
+def retrieve_rule_candidates(
+    user_text: str,
+    limit: int = 3,
+    exclude_rule_ids: set[str] | None = None,
+) -> list[dict[str, Any]]:
     """Return a small candidate set; answers are intentionally excluded."""
 
     query = _search_text(user_text)
     query_grams = _ngrams(query)
     ranked = []
     for order, rule in enumerate(iter_rules()):
+        if exclude_rule_ids and rule["id"] in exclude_rule_ids:
+            continue
         keywords = [_search_text(item) for item in rule.get("keywords", [])]
         examples = [_search_text(item) for item in rule.get("examples", [])]
         keyword_score = sum(2.0 for keyword in keywords if keyword and keyword in query)

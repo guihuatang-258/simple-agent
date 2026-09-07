@@ -4,7 +4,7 @@
 
 ## 能力
 
-- 显式路由：网点查询、转人工、正则话术、受限语义兜底、结束会话
+- LLM 入口分类：网点查询、转人工、其他 FAQ、结束会话
 - 多轮状态：`InMemorySaver` + `thread_id`
 - 高德官方 MCP 地址解析
 - POC 网点服务：预设网点距离排序、营业判断、合规旺季话术
@@ -38,12 +38,19 @@ copy .env.example .env
 每条用户消息都会从 Graph 的 `START` 重新进入：
 
 ```text
-START -> route -> branch / handoff / rule / fallback / goodbye -> END
+START -> LLM intent router
+  ├─ branch_query  -> branch tools -> END
+  ├─ human_handoff -> handoff tool -> END
+  ├─ faq           -> regex rule / bounded fallback -> END
+  └─ goodbye       -> END
 ```
 
-`route` 先确定性识别网点查询、转人工和再见，再执行正则话术。规则命中时完全
-不调用 LLM，直接返回 `data/dialogue_rules.json` 中的标准口径。当前前三个类别
-来自“网点查询营销话术.xlsx”的“营销话术”页：租车条件、要素查询、车况与服务。
+`route` 每轮先让 LLM 只判断 `branch_query`、`human_handoff`、`faq` 或 `goodbye`，
+同时提取网点查询地址或转人工确认状态。入口只返回结构化 JSON，不生成客服答案。
+
+只有 `faq` 才进入规则匹配。正则命中后不再调用回答模型，直接返回
+`data/dialogue_rules.json` 中的标准口径。当前前三个类别来自“网点查询营销话术.xlsx”
+的“营销话术”页：租车条件、要素查询、车况与服务。
 
 正则未命中时，本地字符相似度和关键词检索只召回最多三条候选主题，候选答案不
 发送给模型。LLM 只能返回一个候选规则 ID 或 `null`；代码校验 ID 后读取标准口径。
@@ -54,9 +61,9 @@ Graph 设置 `conversation_ended=true`，CLI 结束当前会话。
 
 ## 网点和营销数据
 
-POC 租车网点保存在 `data/branches.json`。Graph 先通过高德把用户当前地址转换为
-GCJ-02 坐标，再由本地代码完成距离排序和营业判断。营销开关及审核话术保存在
-`data/marketing_policy.json`。
+POC 租车网点保存在 `data/branches.json`。入口判定为网点查询后，Graph 直接调用
+高德地址解析工具和本地网点推荐工具，完成 GCJ-02 坐标解析、距离排序和营业判断。
+营销开关及审核话术保存在 `data/marketing_policy.json`。
 
 两个示例网点尚未提供联系电话，因此对应字段为 `null`，程序不会生成虚构号码。
 `request_human_handoff` 当前只生成带请求 ID 的 POC 转接事件，并且要求用户明确

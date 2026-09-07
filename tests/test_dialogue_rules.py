@@ -61,17 +61,24 @@ class DialogueRuleTests(unittest.TestCase):
 
 
 class CustomerServiceGraphTests(unittest.TestCase):
-    def test_regex_rule_response_does_not_call_model(self):
-        model = FakeModel()
+    def test_regex_rule_response_only_calls_entry_classifier(self):
+        model = FakeModel(
+            ['{"intent":"faq","address":"","handoff_decision":"unknown"}']
+        )
         graph = build_agent([], model=model)
         result = invoke(graph, "第一次租车，流程会不会很麻烦还要排队")
         final = result["messages"][-1]
         self.assertEqual(final.content, get_rule("rental-process-concern")["answer"])
         self.assertEqual(final.additional_kwargs["response_source"], "regex_rule")
-        self.assertEqual(model.calls, 0)
+        self.assertEqual(model.calls, 1)
 
     def test_bounded_fallback_selects_configured_answer(self):
-        model = FakeModel(['{"rule_id":"long-distance-breakdown"}'])
+        model = FakeModel(
+            [
+                '{"intent":"faq","address":"","handoff_decision":"unknown"}',
+                '{"rule_id":"long-distance-breakdown"}',
+            ]
+        )
         graph = build_agent([], model=model)
         result = invoke(graph, "长距离自驾时车半路趴窝会有人处理吗")
         final = result["messages"][-1]
@@ -79,10 +86,16 @@ class CustomerServiceGraphTests(unittest.TestCase):
         self.assertEqual(
             final.additional_kwargs["response_source"], "bounded_semantic_fallback"
         )
-        self.assertEqual(model.calls, 1)
+        self.assertEqual(model.calls, 2)
 
     def test_unmatched_fallback_then_confirmed_handoff(self):
-        model = FakeModel(['{"rule_id":null}'])
+        model = FakeModel(
+            [
+                '{"intent":"faq","address":"","handoff_decision":"unknown"}',
+                '{"rule_id":null}',
+                '{"intent":"human_handoff","address":"","handoff_decision":"confirmed"}',
+            ]
+        )
         graph = build_agent([], model=model)
         thread_id = uuid.uuid4().hex
         first = invoke(graph, "我的发票什么时候开", thread_id)
@@ -90,13 +103,17 @@ class CustomerServiceGraphTests(unittest.TestCase):
         second = invoke(graph, "好的", thread_id)
         final = second["messages"][-1]
         self.assertEqual(final.additional_kwargs["response_source"], "handoff")
-        self.assertEqual(model.calls, 1)
+        self.assertEqual(model.calls, 3)
 
     def test_goodbye_marks_conversation_ended(self):
-        graph = build_agent([], model=FakeModel())
+        model = FakeModel(
+            ['{"intent":"goodbye","address":"","handoff_decision":"unknown"}']
+        )
+        graph = build_agent([], model=model)
         result = invoke(graph, "谢谢，再见")
         self.assertTrue(result["conversation_ended"])
         self.assertEqual(result["messages"][-1].content, "感谢您的咨询，再见。")
+        self.assertEqual(model.calls, 1)
 
     def test_branch_address_is_collected_across_turns(self):
         @tool
@@ -108,7 +125,12 @@ class CustomerServiceGraphTests(unittest.TestCase):
                 ensure_ascii=False,
             )
 
-        model = FakeModel(['{"address":""}'])
+        model = FakeModel(
+            [
+                '{"intent":"branch_query","address":"","handoff_decision":"unknown"}',
+                '{"intent":"branch_query","address":"天津南站","handoff_decision":"unknown"}',
+            ]
+        )
         graph = build_agent([maps_geo], model=model)
         thread_id = uuid.uuid4().hex
         first = invoke(graph, "帮我查一下最近的网点", thread_id)
@@ -117,9 +139,9 @@ class CustomerServiceGraphTests(unittest.TestCase):
         final = second["messages"][-1]
         self.assertEqual(final.additional_kwargs["response_source"], "branch_workflow")
         self.assertIn("天津南站服务点", final.content)
-        self.assertEqual(model.calls, 1)
+        self.assertEqual(model.calls, 2)
 
-    def test_semantic_branch_match_returns_to_branch_workflow(self):
+    def test_entry_classifier_sends_branch_query_directly_to_tools(self):
         @tool
         def maps_geo(address: str, city: str = "") -> str:
             """Test geocoder."""
@@ -128,8 +150,7 @@ class CustomerServiceGraphTests(unittest.TestCase):
 
         model = FakeModel(
             [
-                '{"rule_id":"branch-location-or-phone"}',
-                '{"address":"天津南站"}',
+                '{"intent":"branch_query","address":"天津南站","handoff_decision":"unknown"}',
             ]
         )
         graph = build_agent([maps_geo], model=model)
@@ -137,7 +158,7 @@ class CustomerServiceGraphTests(unittest.TestCase):
         final = result["messages"][-1]
         self.assertEqual(final.additional_kwargs["response_source"], "branch_workflow")
         self.assertIn("天津南站服务点", final.content)
-        self.assertLessEqual(model.calls, 2)
+        self.assertEqual(model.calls, 1)
 
 
 if __name__ == "__main__":
