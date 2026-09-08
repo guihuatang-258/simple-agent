@@ -75,7 +75,9 @@ class AMapWebServiceClient:
         cache_size: int = 128,
         session: requests.Session | None = None,
     ) -> None:
+        # Key 只保存在客户端实例中。后续异常不会拼接请求 URL，避免日志泄露 Key。
         self._api_key = _configured_api_key() if api_key is None else api_key.strip()
+        # requests 支持 (connect, read) 两段超时，分别控制建连失败和服务端慢响应。
         self._timeout = (
             connect_timeout
             if connect_timeout is not None
@@ -88,11 +90,14 @@ class AMapWebServiceClient:
         self._cache: OrderedDict[tuple[str, str], dict[str, Any]] = OrderedDict()
         self._cache_lock = threading.Lock()
         self._thread_local = threading.local()
+        # session 参数仅用于测试或外部注入；生产环境默认使用线程本地连接池。
         self._injected_session = session
 
     def _session(self) -> requests.Session:
         if self._injected_session is not None:
             return self._injected_session
+        # resolve_location 通过 asyncio.to_thread 执行。Session 并非线程安全，
+        # 因此每个工作线程各自复用连接，兼顾 keep-alive 和并发安全。
         session = getattr(self._thread_local, "session", None)
         if session is None:
             session = requests.Session()
@@ -106,6 +111,7 @@ class AMapWebServiceClient:
             cached = self._cache.get(key)
             if cached is None:
                 return None
+            # 读取即提升为最近使用项；命中缓存时没有地图 HTTP 耗时。
             self._cache.move_to_end(key)
             return {**cached, "cache_hit": True, "elapsed_ms": 0}
 
@@ -113,6 +119,7 @@ class AMapWebServiceClient:
         if not self._cache_size:
             return
         with self._cache_lock:
+            # elapsed_ms/cache_hit 属于本次调用状态，不写入可复用的业务结果。
             self._cache[key] = {
                 item: value
                 for item, value in result.items()
@@ -133,6 +140,7 @@ class AMapWebServiceClient:
             raise AMapWebServiceError("地址解析服务暂未配置。")
 
         cache_key = (address, city)
+        # 同一会话重复查询相同地址时直接返回，省掉完整的外部网络往返。
         cached = self._cache_get(cache_key)
         if cached is not None:
             return cached
@@ -140,9 +148,11 @@ class AMapWebServiceClient:
         params = {
             "key": self._api_key,
             "keywords": address,
+            # Graph 只消费第一条候选，限制为 1 可减少高德检索和传输的数据量。
             "page_size": "1",
         }
         if city:
+            # 已从地址提取出城市时严格限城，降低同名地标跨城误召回的概率。
             params.update({"region": city, "city_limit": "true"})
 
         started = time.perf_counter()
@@ -171,6 +181,8 @@ class AMapWebServiceClient:
 
         poi = _first_poi(payload)
         longitude, latitude = _coordinates(poi)
+        # place/text 已同时返回 typecode 和坐标，在同一次响应内完成粒度判断，
+        # 不再为了 geocode/geo.level 追加第二个地图请求。
         classification = classify_first_poi(payload, query=address)
         if classification is None:
             raise AMapWebServiceError("地点搜索结果无法判断地理粒度。")
@@ -195,4 +207,5 @@ class AMapWebServiceClient:
     async def resolve_location(self, address: str, city: str = "") -> dict[str, Any]:
         """Run blocking requests I/O off the LangGraph event loop."""
 
+        # requests 是同步库，放到线程池后不会卡住其它异步 Graph 会话。
         return await asyncio.to_thread(self.resolve_location_sync, address, city)

@@ -339,6 +339,7 @@ async def _branch_node(
 ) -> dict[str, Any]:
     user_text = _latest_user_text(state)
     pending = state.get("pending_intent") == "branch_address"
+    # 优先使用入口 LLM 提取的地址；等待补充地址时，整条用户消息就是地址槽位。
     address = state.get("extracted_address") or _heuristic_address(
         user_text, pending)
     if not address:
@@ -348,6 +349,7 @@ async def _branch_node(
         }
 
     try:
+        # 客户端内部只调用一次 place/text，并负责连接复用、缓存和 typecode 判断。
         location = await amap_client.resolve_location(
             address,
             city=_city_hint(address) or "",
@@ -359,6 +361,8 @@ async def _branch_node(
         }
 
     classification = location["classification"]
+    # 市级、区级或无法判断的结果不足以可靠计算“最近网点”，继续收窄位置；
+    # 只有区级以下的道路、门牌、地标或普通 POI 才进入距离计算。
     if classification.get("relative_to_district") != "finer":
         return {
             "messages": [
@@ -377,6 +381,8 @@ async def _branch_node(
         }
 
     try:
+        # 网点库已在本地，直接调用纯函数，避免 LangChain Tool 参数校验和 JSON
+        # 序列化的额外开销；坐标仍保持高德 GCJ-02，与网点库一致。
         recommendation = recommend_nearby_branch_data(
             location["longitude"],
             location["latitude"],
@@ -394,6 +400,7 @@ async def _branch_node(
             AIMessage(
                 content=response,
                 additional_kwargs={
+                    # 这些字段只用于 CLI 执行路径和性能排查，不会拼进客服话术。
                     "response_source": "branch_workflow",
                     "map_provider": "amap_web_service",
                     "map_level": classification.get("level_code"),

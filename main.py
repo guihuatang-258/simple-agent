@@ -81,6 +81,8 @@ def _execution_path_label(node: str, update: object) -> str:
                 details.append(f"source={source}")
             if rule_id:
                 details.append(f"rule_id={rule_id}")
+            # branch 节点把地图耗时写在消息元数据里；这里只展示调试信息，
+            # 不依赖或修改 Graph 的业务状态。
             if metadata.get("map_provider"):
                 details.append(f"map={metadata['map_provider']}")
             if metadata.get("map_level"):

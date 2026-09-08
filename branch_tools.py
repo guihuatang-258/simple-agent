@@ -260,6 +260,7 @@ def get_compliant_marketing_message_data(
 ) -> dict[str, Any]:
     """Return the configured marketing decision without tool serialization."""
 
+    # Graph 节点走结构化纯函数；下方同名 LangChain Tool 仅保留给其它调用方。
     policy = load_marketing_policy()
     configured = policy.get("scenarios", {}).get(scenario)
     if not configured:
