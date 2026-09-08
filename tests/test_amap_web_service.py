@@ -3,7 +3,7 @@ from __future__ import annotations
 import unittest
 from unittest.mock import Mock
 
-from amap_web_service import AMapWebServiceClient, AMapWebServiceError
+from components.maps.amap_web_service import AMapWebServiceClient, AMapWebServiceError
 
 
 def _response(*, typecode: str = "150200") -> Mock:

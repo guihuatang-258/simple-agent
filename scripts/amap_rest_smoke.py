@@ -14,10 +14,7 @@ from typing import Any
 import requests
 from dotenv import load_dotenv
 
-try:
-    from .geo_level import classify_first_geocode, classify_first_poi
-except ImportError:
-    from geo_level import classify_first_geocode, classify_first_poi
+from components.maps.geo_level import classify_first_geocode, classify_first_poi
 
 
 _ENDPOINTS = {

@@ -11,7 +11,7 @@ from typing import Any
 
 import requests
 
-from scripts.geo_level import classify_first_poi
+from .geo_level import classify_first_poi
 
 
 _PLACE_TEXT_ENDPOINT = "https://restapi.amap.com/v5/place/text"

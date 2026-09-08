@@ -14,7 +14,7 @@ from typing import Any
 from dotenv import load_dotenv
 from langchain_core.tools import BaseTool
 
-from mcp_tools import load_amap_store_tools
+from components.maps.mcp_tools import load_amap_store_tools
 
 
 _TOOL_NAMES = ("maps_geo", "maps_around_search", "maps_search_detail")
@@ -42,7 +42,8 @@ def _parser() -> argparse.ArgumentParser:
     around.add_argument("--keywords", default="", help="可选搜索关键词。")
     around.add_argument("--radius", default="1000", help="搜索半径，默认1000米。")
 
-    detail = subparsers.add_parser("detail", help="测试 POI 详情 maps_search_detail。")
+    detail = subparsers.add_parser(
+        "detail", help="测试 POI 详情 maps_search_detail。")
     detail.add_argument("--id", required=True, help="周边搜索返回的 POI ID。")
 
     all_tools = subparsers.add_parser("all", help="串联测试地址解析、周边搜索和详情。")
@@ -79,7 +80,7 @@ def _result_payload(result: Any) -> dict[str, Any]:
     if start < 0 or end < start:
         raise RuntimeError(f"工具未返回 JSON 对象：{text[:300]}")
     try:
-        payload = json.loads(text[start : end + 1])
+        payload = json.loads(text[start: end + 1])
     except json.JSONDecodeError as exc:
         raise RuntimeError(f"工具返回的 JSON 无法解析：{text[:300]}") from exc
     if not isinstance(payload, dict):
@@ -102,7 +103,8 @@ async def _invoke_tool(tool: BaseTool, arguments: dict[str, str]) -> Any:
     elapsed_ms = (time.perf_counter() - started) * 1000
     print(f"[elapsed] {elapsed_ms:.0f} ms")
     try:
-        display = json.dumps(_result_payload(result), ensure_ascii=False, indent=2)
+        display = json.dumps(_result_payload(
+            result), ensure_ascii=False, indent=2)
     except RuntimeError:
         display = _result_text(result)
     print("[result]")

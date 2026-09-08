@@ -5,7 +5,7 @@ import unittest
 from copy import deepcopy
 from unittest.mock import patch
 
-from branch_tools import (
+from components.customer_service.branch_tools import (
     get_compliant_marketing_message,
     load_branch_catalog,
     recommend_nearby_branch_data,
@@ -68,7 +68,7 @@ class BranchRecommendationTests(unittest.TestCase):
             }
         )
         with patch(
-            "branch_tools.load_branch_catalog",
+            "components.customer_service.branch_tools.load_branch_catalog",
             return_value={"branches": [branches[0], always_open]},
         ):
             result = recommend_nearby_branch_data(

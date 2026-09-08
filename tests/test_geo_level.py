@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import unittest
 
-from scripts.geo_level import (
+from components.maps.geo_level import (
     classify_amap_location,
     classify_amap_poi,
     classify_first_geocode,

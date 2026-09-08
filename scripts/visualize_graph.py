@@ -19,7 +19,7 @@ class _StructureOnlyModel:
 def build_graph_structure():
     """Build the compiled graph without loading tools or a real LLM."""
 
-    return build_agent([], model=_StructureOnlyModel()).get_graph()
+    return build_agent(model=_StructureOnlyModel()).get_graph()
 
 
 def _parser() -> argparse.ArgumentParser:

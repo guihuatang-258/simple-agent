@@ -5,32 +5,27 @@ from __future__ import annotations
 import json
 import os
 import re
-from collections.abc import Sequence
 from typing import Any, Literal
 
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
-from langchain_core.tools import BaseTool
 from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.graph import END, START, MessagesState, StateGraph
 from pydantic import BaseModel, ConfigDict, Field
 
-from amap_web_service import AMapWebServiceClient
-from branch_tools import (
+from components.customer_service.branch_tools import (
     get_compliant_marketing_message_data,
     recommend_nearby_branch_data,
     request_human_handoff,
 )
-from dashscope_chat import build_dashscope_model
-from dialogue_rules import (
+from components.customer_service.dialogue_rules import (
     get_rule,
     match_dialogue_rule,
     retrieve_rule_candidates,
 )
-from openai_chat import build_openai_model
+from components.llm.dashscope_chat import build_dashscope_model
+from components.llm.openai_chat import build_openai_model
+from components.maps.amap_web_service import AMapWebServiceClient
 
-
-# 网点节点直接调用高德 Web Service；默认启动不再加载 MCP Server。
-DEFAULT_TOOLS: tuple[BaseTool, ...] = ()
 
 _NATIVE_PROVIDERS = {"dashscope", "tongyi", "qwen"}
 _INTENTS = {"branch_query", "human_handoff", "faq", "goodbye"}
@@ -532,14 +527,12 @@ async def _fallback_node(
 
 
 def build_agent(
-    tools: Sequence[BaseTool] = (),
     *,
     model=None,
     amap_client: AMapWebServiceClient | None = None,
 ):
     """Build one-turn routing graph; the checkpointer carries state across turns."""
 
-    del tools
     selected_model = model or _build_model()
     location_client = amap_client or AMapWebServiceClient()
 
@@ -587,24 +580,3 @@ def build_agent(
     ):
         workflow.add_edge(node, END)
     return workflow.compile(checkpointer=InMemorySaver(), name="customer-service-graph")
-
-
-def build_chat_agent(tools: Sequence[BaseTool] = ()):
-    """Build the pure-chat comparison graph used by main_chat.py."""
-
-    del tools
-    model = _build_model()
-
-    async def chat_node(state: MessagesState):
-        messages = [
-            SystemMessage(content="你是一个简洁、可靠的助手。用用户使用的语言回答。"),
-            *state["messages"],
-        ]
-        response = await model.ainvoke(messages, config={"tags": ["user-facing"]})
-        return {"messages": [response]}
-
-    workflow = StateGraph(MessagesState)
-    workflow.add_node("chat", chat_node)
-    workflow.add_edge(START, "chat")
-    workflow.add_edge("chat", END)
-    return workflow.compile(checkpointer=InMemorySaver(), name="pure-chat-graph")

@@ -7,7 +7,7 @@ from unittest.mock import patch
 from langchain_core.messages import HumanMessage
 from pydantic import BaseModel, ConfigDict
 
-from dashscope_chat import ChatDashScope
+from components.llm.dashscope_chat import ChatDashScope
 
 
 class _Decision(BaseModel):
@@ -17,7 +17,7 @@ class _Decision(BaseModel):
 
 
 class DashScopeStructuredOutputTests(unittest.TestCase):
-    @patch("dashscope_chat.Generation.call")
+    @patch("components.llm.dashscope_chat.Generation.call")
     @patch("requests.Session.get")
     def test_json_mode_reaches_native_dashscope_call(self, _get, generation_call):
         generation_call.return_value = {

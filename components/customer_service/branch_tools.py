@@ -103,7 +103,8 @@ def _is_open(branch: dict[str, Any], at: datetime) -> bool:
     if branch.get("is_24_hours"):
         return True
 
-    timezone = ZoneInfo(branch["business_hours"].get("timezone", "Asia/Shanghai"))
+    timezone = ZoneInfo(branch["business_hours"].get(
+        "timezone", "Asia/Shanghai"))
     local = at.astimezone(timezone)
     clock = local.timetz().replace(tzinfo=None)
 
@@ -208,13 +209,15 @@ def recommend_nearby_branch_data(
 
     if not nearest_open:
         fallback_24h = next(
-            (item for item in ranked[1:] if item[1].get("is_24_hours") and item[2]),
+            (item for item in ranked[1:] if item[1].get(
+                "is_24_hours") and item[2]),
             None,
         )
         fallback_open = next((item for item in ranked[1:] if item[2]), None)
         selected = fallback_24h or fallback_open
         if selected:
-            recommendation = _public_branch(selected[1], selected[0], selected[2])
+            recommendation = _public_branch(
+                selected[1], selected[0], selected[2])
             reason = "nearest_24h_fallback" if fallback_24h else "nearest_open_fallback"
 
     if reason == "nearest_open":
@@ -238,21 +241,6 @@ def recommend_nearby_branch_data(
             for distance, branch, is_open in ranked
         ],
     }
-
-
-@tool
-def recommend_nearby_branch(
-    longitude: float,
-    latitude: float,
-    current_time: str = "",
-) -> str:
-    """根据用户地址解析出的GCJ-02经纬度，从预设网点库中确定性计算最近网点、营业状态和营业兜底推荐。longitude和latitude必须来自地图地址解析结果，不能猜测。current_time留空表示使用当前北京时间；测试指定时间时传ISO 8601格式。"""
-
-    try:
-        result = recommend_nearby_branch_data(longitude, latitude, current_time)
-    except (OSError, RuntimeError, ValueError) as exc:
-        result = {"status": "error", "message": str(exc)}
-    return json.dumps(result, ensure_ascii=False)
 
 
 def get_compliant_marketing_message_data(

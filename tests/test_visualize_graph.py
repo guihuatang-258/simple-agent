@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from visualize_graph import build_graph_structure, main
+from scripts.visualize_graph import build_graph_structure, main
 
 
 class VisualizeGraphTests(unittest.TestCase):

@@ -7,7 +7,7 @@ import uuid
 from langchain_core.messages import AIMessage
 
 from agent import build_agent
-from dialogue_rules import (
+from components.customer_service.dialogue_rules import (
     get_rule,
     iter_rules,
     load_dialogue_rules,
@@ -96,7 +96,7 @@ class CustomerServiceGraphTests(unittest.TestCase):
         model = FakeModel(
             ['{"intent":"faq","address":"","handoff_decision":"unknown"}']
         )
-        graph = build_agent([], model=model)
+        graph = build_agent(model=model)
         result = invoke(graph, "第一次租车，流程会不会很麻烦还要排队")
         final = result["messages"][-1]
         self.assertEqual(final.content, get_rule("rental-process-concern")["answer"])
@@ -111,7 +111,7 @@ class CustomerServiceGraphTests(unittest.TestCase):
                 '{"rule_id":"long-distance-breakdown"}',
             ]
         )
-        graph = build_agent([], model=model)
+        graph = build_agent(model=model)
         result = invoke(graph, "长距离自驾时车半路趴窝会有人处理吗")
         final = result["messages"][-1]
         self.assertEqual(final.content, get_rule("long-distance-breakdown")["answer"])
@@ -129,7 +129,7 @@ class CustomerServiceGraphTests(unittest.TestCase):
                 '{"intent":"human_handoff","address":"","handoff_decision":"confirmed"}',
             ]
         )
-        graph = build_agent([], model=model)
+        graph = build_agent(model=model)
         thread_id = uuid.uuid4().hex
         first = invoke(graph, "我的发票什么时候开", thread_id)
         self.assertEqual(first["pending_intent"], "handoff_confirmation")
@@ -142,7 +142,7 @@ class CustomerServiceGraphTests(unittest.TestCase):
         model = FakeModel(
             ['{"intent":"goodbye","address":"","handoff_decision":"unknown"}']
         )
-        graph = build_agent([], model=model)
+        graph = build_agent(model=model)
         result = invoke(graph, "谢谢，再见")
         self.assertTrue(result["conversation_ended"])
         self.assertEqual(result["messages"][-1].content, "感谢您的咨询，再见。")
@@ -156,7 +156,7 @@ class CustomerServiceGraphTests(unittest.TestCase):
                 '{"intent":"branch_query","address":"天津南站","handoff_decision":"unknown"}',
             ]
         )
-        graph = build_agent([], model=model, amap_client=amap_client)
+        graph = build_agent(model=model, amap_client=amap_client)
         thread_id = uuid.uuid4().hex
         first = invoke(graph, "帮我查一下最近的网点", thread_id)
         self.assertEqual(first["pending_intent"], "branch_address")
@@ -174,7 +174,7 @@ class CustomerServiceGraphTests(unittest.TestCase):
                 '{"intent":"branch_query","address":"天津南站","handoff_decision":"unknown"}',
             ]
         )
-        graph = build_agent([], model=model, amap_client=amap_client)
+        graph = build_agent(model=model, amap_client=amap_client)
         result = invoke(graph, "天津南站周围可以办理提车吗")
         final = result["messages"][-1]
         self.assertEqual(final.additional_kwargs["response_source"], "branch_workflow")
@@ -189,7 +189,7 @@ class CustomerServiceGraphTests(unittest.TestCase):
                 '"handoff_decision":"unknown"}',
             ]
         )
-        graph = build_agent([], model=model, amap_client=amap_client)
+        graph = build_agent(model=model, amap_client=amap_client)
 
         result = invoke(graph, "天津市哪个网点最近")
         final = result["messages"][-1]

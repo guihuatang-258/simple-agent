@@ -6,17 +6,11 @@ import asyncio
 import sys
 import time
 import uuid
-from collections.abc import Callable, Sequence
-from contextlib import AbstractAsyncContextManager
+from collections.abc import Callable
 from pathlib import Path
 
 from dotenv import load_dotenv
-from langchain_core.tools import BaseTool
-
-from agent import DEFAULT_TOOLS, build_agent
-
-
-ToolLoader = Callable[[], AbstractAsyncContextManager[list[BaseTool]]]
+from agent import build_agent
 
 load_dotenv(Path(__file__).resolve().parent / ".env")
 
@@ -39,22 +33,6 @@ class _FirstTokenTimer:
         self._done = True
         ms = (time.perf_counter() - self._start) * 1000
         print(f"[首token] {ms:.0f} ms", flush=True)
-
-
-def _print_tool_updates(data: dict) -> None:
-    for update in data.values():
-        if not isinstance(update, dict):
-            continue
-        for message in update.get("messages", []):
-            kind = getattr(message, "type", "")
-            name = getattr(message, "name", "") or ""
-            content = getattr(message, "content", "") or ""
-            tool_calls = getattr(message, "tool_calls", None) or []
-            if kind == "ai" and tool_calls:
-                for call in tool_calls:
-                    print(f"\n[tool] {call.get('name')}({call.get('args')})")
-            elif kind == "tool":
-                print(f"[result] {name}: {content}")
 
 
 def _execution_path_label(node: str, update: object) -> str:
@@ -145,7 +123,8 @@ async def _run_turn(agent, user: str, config: dict) -> bool:
             token = data[0] if isinstance(data, tuple) else data
             metadata = data[1] if isinstance(
                 data, tuple) and len(data) > 1 else {}
-            tags = metadata.get("tags", []) if isinstance(metadata, dict) else []
+            tags = metadata.get("tags", []) if isinstance(
+                metadata, dict) else []
             # 地址抽取和语义兜底模型只返回内部JSON，不能流式展示给用户。
             if "internal-routing" in tags:
                 continue
@@ -175,7 +154,6 @@ async def _run_turn(agent, user: str, config: dict) -> bool:
                 print(text, end="", flush=True)
         elif kind == "updates" and isinstance(data, dict):
             _append_execution_path(data, execution_path)
-            _print_tool_updates(data)
 
     snapshot = await agent.aget_state(config)
     values = snapshot.values if snapshot else {}
@@ -232,21 +210,9 @@ async def _chat(
     *,
     builder: Callable = build_agent,
     title: str = "简易 Agent 已启动。输入问题开始对话，exit / quit 退出。",
-    tools: Sequence[BaseTool | ToolLoader] | None = None,
 ) -> None:
-    # 默认 Web Service 路径没有外部工具加载器，避免导入 MCP 适配器的启动开销。
-    selection = DEFAULT_TOOLS if tools is None else tools
-    if all(isinstance(entry, BaseTool) for entry in selection):
-        agent = builder(list(selection))
-        await _chat_loop(agent, prompt, title)
-        return
-
-    # 保留显式传入第三方 MCP loader 的兼容入口，但默认网点流程不会执行这里。
-    from mcp_tools import load_selected_tools
-
-    async with load_selected_tools(selection) as loaded_tools:
-        agent = builder(loaded_tools)
-        await _chat_loop(agent, prompt, title)
+    agent = builder()
+    await _chat_loop(agent, prompt, title)
 
 
 def chat(
@@ -254,7 +220,6 @@ def chat(
     *,
     builder: Callable = build_agent,
     title: str = "简易 Agent 已启动。输入问题开始对话，exit / quit 退出。",
-    tools: Sequence[BaseTool | ToolLoader] | None = None,
 ) -> None:
     """同步 CLI 入口；内部事件循环用于模型和节点的异步流式调用。"""
 
@@ -263,7 +228,6 @@ def chat(
             prompt,
             builder=builder,
             title=title,
-            tools=tools,
         )
     )
 

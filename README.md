@@ -12,6 +12,22 @@
 - 受限兜底：本地召回 Top-3 候选，LLM 只选规则 ID，代码返回标准话术
 - 千问默认走 DashScope 原生 `Generation.call`，其它厂商可用 OpenAI 兼容接口
 
+## 目录结构
+
+```text
+.
+├─ agent.py                         # LangGraph 编排
+├─ main.py                          # 命令行入口
+├─ components/
+│  ├─ customer_service/             # 网点策略、FAQ 规则和业务数据
+│  ├─ llm/                          # OpenAI 兼容与 DashScope 原生适配器
+│  ├─ maps/                         # 高德 REST、地理层级和 MCP 实验代码
+│  └─ context/                      # 上下文管理实验组件
+├─ scripts/                         # 独立调试和可视化脚本
+├─ docs/                            # 参考资料
+└─ tests/                           # 单元测试
+```
+
 ## 启动
 
 ```powershell
@@ -53,7 +69,7 @@ START -> LLM intent router
 Schema；仅当模型适配器没有结构化输出能力时才回退到本地 JSON 解析。
 
 只有 `faq` 才进入规则匹配。正则命中后不再调用回答模型，直接返回
-`data/dialogue_rules.json` 中的标准口径。当前前三个类别来自“网点查询营销话术.xlsx”
+`components/customer_service/data/dialogue_rules.json` 中的标准口径。当前前三个类别来自“网点查询营销话术.xlsx”
 的“营销话术”页：租车条件、要素查询、车况与服务。
 
 正则未命中时，本地字符相似度和关键词检索只召回最多三条候选主题，候选答案不
@@ -75,22 +91,22 @@ Graph 设置 `conversation_ended=true`，CLI 结束当前会话。
 输出不需要联网：
 
 ```powershell
-python visualize_graph.py
-python visualize_graph.py --format mermaid
-python visualize_graph.py --format mermaid -o customer-service-graph.mmd
+python -m scripts.visualize_graph
+python -m scripts.visualize_graph --format mermaid
+python -m scripts.visualize_graph --format mermaid -o customer-service-graph.mmd
 ```
 
-终端 ASCII 模式使用 `python visualize_graph.py --format ascii`，需要额外安装
+终端 ASCII 模式使用 `python -m scripts.visualize_graph --format ascii`，需要额外安装
 `grandalf`。
 
 ## 网点和营销数据
 
-POC 租车网点保存在 `data/branches.json`。入口判定为网点查询后，Graph 直接调用
+POC 租车网点保存在 `components/customer_service/data/branches.json`。入口判定为网点查询后，Graph 直接调用
 高德 `place/text`，根据首条结果的 `typecode` 和坐标完成地理粒度判断，再由本地
 函数完成距离排序和营业判断。每次定位最多发送一次地图请求；同一进程内重复地址
 会命中最多 128 条的 LRU 缓存。行政区级或更粗的地址不会直接计算距离，而是继续
 询问道路、门牌或附近地标。
-营销开关及审核话术保存在 `data/marketing_policy.json`。
+营销开关及审核话术保存在 `components/customer_service/data/marketing_policy.json`。
 
 两个示例网点尚未提供联系电话，因此对应字段为 `null`，程序不会生成虚构号码。
 `request_human_handoff` 当前只生成带请求 ID 的 POC 转接事件，并且要求用户明确
@@ -106,7 +122,7 @@ LangGraph 事件循环；客户端按线程复用 `requests.Session` 的连接�
 branch(source=branch_workflow, map=amap_web_service, level=poi, map_ms=185, cache=miss)
 ```
 
-`mcp_tools.py` 和 `scripts/amap_tool_smoke.py` 仅保留为独立实验脚本，不参与 Graph
+`components/maps/mcp_tools.py` 和 `scripts/amap_tool_smoke.py` 仅保留为独立实验脚本，不参与 Graph
 默认启动和网点查询链路。
 
 高德 MCP 的三个工具可以通过独立脚本分别测试；输出包含调用参数、耗时和结果，
@@ -142,7 +158,8 @@ REST 脚本同样从 `.env` 读取 `AMAP_MAPS_API_KEY`，并且不会在请求�
 无法稳定判断的自然地名、城市中心等 `190xxx` 返回 `unknown`；需要高德官方
 `level` 时可加 `--geocode-fallback`，仅在 `unknown` 时补调 `geocode/geo`。
 级别相对市级、区级的关系使用 `broader`（范围更大）、`same` 或 `finer`
-（范围更小、更精细）表示，通用判断实现在 `scripts/geo_level.py`。
+（范围更小、更精细）表示，通用判断实现在 `components/maps/geo_level.py`，
+高德返回的级别示例整理在 `docs/geo-levels.md`。
 
 ## 运行示例
 
@@ -150,11 +167,4 @@ REST 脚本同样从 `.env` 读取 `AMAP_MAPS_API_KEY`，并且不会在请求�
 python main.py
 python main.py "天津南站附近哪个网点最近？"
 python main.py "异地还车费为什么这么贵？"
-```
-
-纯聊天模式不加载地图和客服规则，可用于比较模型首 token：
-
-```powershell
-python main_chat.py
-python main_chat.py 你好
 ```
