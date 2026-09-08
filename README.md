@@ -119,6 +119,20 @@ python amap_tool_smoke.py detail --id "周边搜索返回的POI ID"
 python amap_tool_smoke.py all --address "天津南站" --city "天津" --keywords "停车场"
 ```
 
+不启动 MCP Server、直接调用高德 Web Service REST API 时，使用：
+
+```powershell
+python amap_rest_smoke.py text --keywords "北京大学" --types 141201 --region "北京市"
+python amap_rest_smoke.py geo --address "天津南站" --city "天津"
+python amap_rest_smoke.py around --location "117.050646,39.050010" --keywords "停车场" --radius 1000
+python amap_rest_smoke.py detail --id "搜索接口返回的POI ID" --show-fields business
+python amap_rest_smoke.py all --address "天津南站" --city "天津" --keywords "停车场"
+```
+
+REST 脚本同样从 `.env` 读取 `AMAP_MAPS_API_KEY`，并且不会在请求日志或错误信息中
+打印 Key。`--timeout` 需要写在子命令之前，例如
+`python amap_rest_smoke.py --timeout 30 text --keywords "北京大学"`。
+
 ## 运行示例
 
 ```powershell
