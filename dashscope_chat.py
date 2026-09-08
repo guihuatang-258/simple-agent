@@ -22,11 +22,12 @@ from langchain_core.messages import (
     ToolMessage,
 )
 from langchain_core.messages.tool import tool_call_chunk
+from langchain_core.output_parsers import PydanticOutputParser
 from langchain_core.outputs import ChatGeneration, ChatGenerationChunk, ChatResult
 from langchain_core.runnables import Runnable
 from langchain_core.tools import BaseTool
 from langchain_core.utils.function_calling import convert_to_openai_tool
-from pydantic import ConfigDict, Field, PrivateAttr
+from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
 
 DEFAULT_HTTP_BASE = "https://dashscope.aliyuncs.com/api/v1"
 INTL_HTTP_BASE = "https://dashscope-intl.aliyuncs.com/api/v1"
@@ -179,6 +180,42 @@ class ChatDashScope(BaseChatModel):
         kwargs.pop("strict", None)
         return self.bind(tools=formatted, **kwargs)
 
+    def with_structured_output(
+        self,
+        schema: type[BaseModel],
+        *,
+        method: str = "json_mode",
+        include_raw: bool = False,
+        strict: bool | None = None,
+        **kwargs: Any,
+    ) -> Runnable[LanguageModelInput, BaseModel]:
+        """Use DashScope response_format and validate the JSON with Pydantic."""
+
+        if include_raw:
+            raise NotImplementedError("DashScope JSON mode 暂不支持 include_raw。")
+        if kwargs:
+            raise ValueError(f"不支持的结构化输出参数：{', '.join(kwargs)}")
+        if not isinstance(schema, type) or not issubclass(schema, BaseModel):
+            raise TypeError("DashScope 结构化输出当前要求 Pydantic BaseModel。")
+        if method == "json_mode":
+            response_format = {"type": "json_object"}
+        elif method == "json_schema":
+            response_format = {
+                "type": "json_schema",
+                "json_schema": {
+                    "name": schema.__name__.lstrip("_") or "structured_output",
+                    "strict": True if strict is None else strict,
+                    "schema": schema.model_json_schema(),
+                },
+            }
+        else:
+            raise ValueError(f"不支持的结构化输出方式：{method}")
+
+        # bind 把 response_format 带到每次 DashScope 调用；输出解析器负责类型校验。
+        return self.bind(response_format=response_format) | PydanticOutputParser(
+            pydantic_object=schema
+        )
+
     def _generate(
         self,
         messages: list[BaseMessage],
@@ -272,7 +309,9 @@ class ChatDashScope(BaseChatModel):
             params["stop"] = stop
         if incremental_output is not None:
             params["incremental_output"] = incremental_output
-        for key in ("tools", "tool_choice"):
+        # response_format 由 with_structured_output 注入，必须继续传到原生 SDK；
+        # 否则上层虽然挂了 Pydantic parser，服务端仍然只是普通文本生成。
+        for key in ("tools", "tool_choice", "response_format"):
             if key in kwargs and kwargs[key] is not None:
                 params[key] = kwargs[key]
         # 千问优先使用 DashScope 原生调用链；同时按模型类型选择正确端点，

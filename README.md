@@ -47,14 +47,18 @@ START -> LLM intent router
 ```
 
 `route` 每轮先让 LLM 只判断 `branch_query`、`human_handoff`、`faq` 或 `goodbye`，
-同时提取网点查询地址或转人工确认状态。入口只返回结构化 JSON，不生成客服答案。
+同时提取网点查询地址或转人工确认状态。入口通过模型原生
+`response_format={"type":"json_object"}` 返回 JSON，再使用 Pydantic 校验字段、
+枚举和值类型，不生成客服答案。OpenAI 兼容接口和 DashScope 原生接口使用同一份
+Schema；仅当模型适配器没有结构化输出能力时才回退到本地 JSON 解析。
 
 只有 `faq` 才进入规则匹配。正则命中后不再调用回答模型，直接返回
 `data/dialogue_rules.json` 中的标准口径。当前前三个类别来自“网点查询营销话术.xlsx”
 的“营销话术”页：租车条件、要素查询、车况与服务。
 
 正则未命中时，本地字符相似度和关键词检索只召回最多三条候选主题，候选答案不
-发送给模型。LLM 只能返回一个候选规则 ID 或 `null`；代码校验 ID 后读取标准口径。
+发送给模型。LLM 同样通过原生 JSON mode 只能返回一个候选规则 ID 或 `null`；
+代码完成 Schema 校验和候选白名单校验后读取标准口径。
 没有可靠匹配时，系统说明当前支持范围并询问是否转人工。
 
 `pending_intent` 保存等待地址或等待转人工确认的跨轮状态。用户说“再见”后，

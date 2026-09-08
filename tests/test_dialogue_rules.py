@@ -20,12 +20,24 @@ class FakeModel:
     def __init__(self, responses: list[str] | None = None):
         self.calls = 0
         self.responses = list(responses or [])
+        self.structured_methods: list[str | None] = []
 
     async def ainvoke(self, messages, config=None):
         del messages, config
         self.calls += 1
         content = self.responses.pop(0) if self.responses else '{"rule_id": null}'
         return AIMessage(content=content)
+
+    def with_structured_output(self, schema, **kwargs):
+        self.structured_methods.append(kwargs.get("method"))
+        parent = self
+
+        class StructuredFakeModel:
+            async def ainvoke(self, messages, config=None):
+                response = await parent.ainvoke(messages, config=config)
+                return schema.model_validate_json(response.content)
+
+        return StructuredFakeModel()
 
 
 class FakeAMapClient:
@@ -90,6 +102,7 @@ class CustomerServiceGraphTests(unittest.TestCase):
         self.assertEqual(final.content, get_rule("rental-process-concern")["answer"])
         self.assertEqual(final.additional_kwargs["response_source"], "regex_rule")
         self.assertEqual(model.calls, 1)
+        self.assertEqual(model.structured_methods, ["json_mode"])
 
     def test_bounded_fallback_selects_configured_answer(self):
         model = FakeModel(
@@ -106,6 +119,7 @@ class CustomerServiceGraphTests(unittest.TestCase):
             final.additional_kwargs["response_source"], "bounded_semantic_fallback"
         )
         self.assertEqual(model.calls, 2)
+        self.assertEqual(model.structured_methods, ["json_mode", "json_mode"])
 
     def test_unmatched_fallback_then_confirmed_handoff(self):
         model = FakeModel(
