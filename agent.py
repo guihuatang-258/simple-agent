@@ -123,6 +123,7 @@ async def _model_json(
     try:
         # json_mode 会让提供商实际收到 response_format={"type":"json_object"}；
         # Pydantic parser 随后继续校验字段、枚举和值类型。
+        # with_structured_output 是 ChatOpenAI 的原生方法
         structured_model = model.with_structured_output(
             schema,
             method="json_mode",
