@@ -108,6 +108,17 @@ chat(tools=[load_amap_store_tools])
 WebServiceAPI 并具有相关接口配额。可设置 `TENCENT_MCP_FORMAT=0`（语义化文本）
 或 `1`（原始 JSON）。
 
+高德 MCP 的三个工具可以通过独立脚本分别测试；输出包含调用参数、耗时和结果，
+不会打印 API Key：
+
+```powershell
+python amap_tool_smoke.py schema
+python amap_tool_smoke.py geo --address "天津南站" --city "天津"
+python amap_tool_smoke.py around --location "117.050646,39.050010" --keywords "停车场" --radius 1000
+python amap_tool_smoke.py detail --id "周边搜索返回的POI ID"
+python amap_tool_smoke.py all --address "天津南站" --city "天津" --keywords "停车场"
+```
+
 ## 运行示例
 
 ```powershell
