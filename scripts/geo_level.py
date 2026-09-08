@@ -12,9 +12,13 @@ _LEVELS = {
     "city": (2, "市级"),
     "district": (3, "区级"),
     "township": (4, "乡镇/街道级"),
+    "subdistrict": (4, "街道级"),
     "neighborhood": (5, "村庄/商圈级"),
+    "village": (5, "村庄级"),
+    "village_group": (6, "村组级"),
     "street": (6, "道路级"),
     "address": (7, "门牌级"),
+    "precise_location": (7, "精确位置点"),
     "poi": (7, "POI点位级"),
 }
 
@@ -38,6 +42,19 @@ _AMAP_LEVEL_MAP = {
 }
 
 _MUNICIPALITIES = {"北京", "北京市", "上海", "上海市", "天津", "天津市", "重庆", "重庆市"}
+
+# 高德 POI 分类表中，只有“普通地名”的细分类编码直接表达行政层级。
+_PLACE_NAME_TYPECODE_LEVELS = {
+    "190101": "country",
+    "190102": "province",
+    "190103": "city",
+    "190104": "city",
+    "190105": "district",
+    "190106": "township",
+    "190107": "subdistrict",
+    "190108": "village",
+    "190109": "village_group",
+}
 
 
 def _has_value(value: Any) -> bool:
@@ -85,6 +102,96 @@ def _infer_from_fields(record: dict[str, Any]) -> tuple[str, str]:
     return "unknown", "unknown"
 
 
+def _normalize_typecode(value: Any) -> str:
+    typecode = str(value or "").strip()
+    return typecode.zfill(6) if typecode.isdigit() else typecode
+
+
+def _level_from_query_admin_fields(
+    record: dict[str, Any], query: str
+) -> tuple[str, str] | None:
+    """Protect bare province/city/district queries from POI search rewrites."""
+
+    query = query.strip()
+    if not query:
+        return None
+
+    district = str(record.get("adname") or record.get("district") or "").strip()
+    city = str(record.get("cityname") or record.get("city") or "").strip()
+    province = str(record.get("pname") or record.get("province") or "").strip()
+    if query == district:
+        return "district", "query_admin_field"
+    if query == city:
+        return "city", "query_admin_field"
+    if query == province:
+        level = "city" if province in _MUNICIPALITIES else "province"
+        return level, "query_admin_field"
+    return None
+
+
+def _infer_from_poi_typecode(record: dict[str, Any]) -> tuple[str, str]:
+    """Infer business scope from one place/text POI typecode."""
+
+    typecode = _normalize_typecode(record.get("typecode"))
+    explicit_level = _PLACE_NAME_TYPECODE_LEVELS.get(typecode)
+    if explicit_level:
+        return explicit_level, "poi_typecode"
+
+    # 交通地名、道路、路口、出入口等已经能提供区级以下的定位点。
+    if typecode.startswith("1903"):
+        return "precise_location", "poi_typecode_precise"
+    # 门牌、道路门牌和楼栋号均按门牌级处理。
+    if typecode.startswith("1904"):
+        return "address", "poi_typecode_precise"
+
+    # 其余 190xxx 可能是自然地名、城市中心或热点地名，覆盖范围不稳定。
+    if typecode.startswith("190"):
+        return "unknown", "poi_typecode_ambiguous"
+
+    # 学校、车站、商场等普通 POI 的 typecode 表达业务类别，不表达行政级别；
+    # 但搜索结果同时给出了唯一 POI 和坐标时，足以用于附近网点计算。
+    if typecode and all(
+        _has_value(record.get(field)) for field in ("id", "name", "location")
+    ):
+        return "poi", "poi_typecode"
+
+    return _infer_from_fields(record)
+
+
+def _classification_result(
+    level_code: str,
+    *,
+    source: str,
+    raw_level: str | None = None,
+    raw_typecode: str | None = None,
+) -> dict[str, Any]:
+    level = _LEVELS.get(level_code)
+    if level is None:
+        return {
+            "level_code": "unknown",
+            "level_label": "未知",
+            "raw_level": raw_level,
+            "raw_typecode": raw_typecode,
+            "source": source or "unknown",
+            "relative_to_city": "unknown",
+            "relative_to_district": "unknown",
+            "is_city_or_finer": False,
+            "is_district_or_finer": False,
+        }
+
+    return {
+        "level_code": level_code,
+        "level_label": level[1],
+        "raw_level": raw_level,
+        "raw_typecode": raw_typecode,
+        "source": source,
+        "relative_to_city": compare_geographic_scope(level_code, "city"),
+        "relative_to_district": compare_geographic_scope(level_code, "district"),
+        "is_city_or_finer": level[0] >= _LEVELS["city"][0],
+        "is_district_or_finer": level[0] >= _LEVELS["district"][0],
+    }
+
+
 def classify_amap_location(record: dict[str, Any]) -> dict[str, Any]:
     """Classify one AMap geocode or POI record and compare it with city/district."""
 
@@ -103,29 +210,24 @@ def classify_amap_location(record: dict[str, Any]) -> dict[str, Any]:
     if level_code is None:
         level_code, source = _infer_from_fields(record)
 
-    level = _LEVELS.get(level_code)
-    if level is None:
-        return {
-            "level_code": "unknown",
-            "level_label": "未知",
-            "raw_level": raw_level or None,
-            "source": source or "unknown",
-            "relative_to_city": "unknown",
-            "relative_to_district": "unknown",
-            "is_city_or_finer": False,
-            "is_district_or_finer": False,
-        }
+    return _classification_result(
+        level_code,
+        source=source,
+        raw_level=raw_level or None,
+    )
 
-    return {
-        "level_code": level_code,
-        "level_label": level[1],
-        "raw_level": raw_level or None,
-        "source": source,
-        "relative_to_city": compare_geographic_scope(level_code, "city"),
-        "relative_to_district": compare_geographic_scope(level_code, "district"),
-        "is_city_or_finer": level[0] >= _LEVELS["city"][0],
-        "is_district_or_finer": level[0] >= _LEVELS["district"][0],
-    }
+
+def classify_amap_poi(record: dict[str, Any], query: str = "") -> dict[str, Any]:
+    """Classify one place/text POI without issuing a second geocode request."""
+
+    level_code, source = _level_from_query_admin_fields(
+        record, query
+    ) or _infer_from_poi_typecode(record)
+    return _classification_result(
+        level_code,
+        source=source,
+        raw_typecode=_normalize_typecode(record.get("typecode")) or None,
+    )
 
 
 def classify_first_geocode(payload: dict[str, Any]) -> dict[str, Any] | None:
@@ -136,3 +238,15 @@ def classify_first_geocode(payload: dict[str, Any]) -> dict[str, Any] | None:
         return None
     first = next((item for item in candidates if isinstance(item, dict)), None)
     return classify_amap_location(first) if first else None
+
+
+def classify_first_poi(
+    payload: dict[str, Any], query: str = ""
+) -> dict[str, Any] | None:
+    """Classify the first place/text POI from its typecode and point fields."""
+
+    candidates = payload.get("pois") or []
+    if not isinstance(candidates, list):
+        return None
+    first = next((item for item in candidates if isinstance(item, dict)), None)
+    return classify_amap_poi(first, query=query) if first else None

@@ -15,9 +15,9 @@ import requests
 from dotenv import load_dotenv
 
 try:
-    from .geo_level import classify_first_geocode
+    from .geo_level import classify_first_geocode, classify_first_poi
 except ImportError:
-    from geo_level import classify_first_geocode
+    from geo_level import classify_first_geocode, classify_first_poi
 
 
 _ENDPOINTS = {
@@ -51,6 +51,11 @@ def _parser() -> argparse.ArgumentParser:
     text.add_argument("--page-size", type=int, default=None, help="每页记录数。")
     text.add_argument("--page-num", type=int, default=None, help="页码。")
     text.add_argument("--show-fields", default="", help="需要额外返回的字段。")
+    text.add_argument(
+        "--geocode-fallback",
+        action="store_true",
+        help="typecode 无法判断时，再调用 geocode/geo 获取官方 level。",
+    )
 
     geo = subparsers.add_parser("geo", help="测试 v3 地址地理编码。")
     geo.add_argument("--address", required=True, help="详细地址或地标。")
@@ -194,6 +199,15 @@ def _print_geocode_level(payload: dict[str, Any]) -> None:
     print(json.dumps(level, ensure_ascii=False, indent=2))
 
 
+def _print_poi_level(payload: dict[str, Any], query: str = "") -> dict[str, Any]:
+    level = classify_first_poi(payload, query=query)
+    if level is None:
+        raise RuntimeError("place/text 没有返回可判断的 pois[0]。")
+    print("[poi-level]")
+    print(json.dumps(level, ensure_ascii=False, indent=2))
+    return level
+
+
 def _location_from_geo(payload: dict[str, Any]) -> str:
     geocodes = payload.get("geocodes") or []
     if isinstance(geocodes, list):
@@ -229,28 +243,33 @@ def _run(args: argparse.Namespace) -> int:
             search_result = _request(
                 session, _ENDPOINTS["text"], params, key=key, timeout=args.timeout
             )
-            address, city, poi = _detailed_address_from_first_poi(search_result)
+            poi = _first_poi(search_result)
             print("[selected-place]")
             print(
                 json.dumps(
                     {
                         "id": poi.get("id"),
                         "name": poi.get("name"),
-                        "source_address": poi.get("address"),
-                        "geocode_address": address,
+                        "address": poi.get("address"),
+                        "location": poi.get("location"),
+                        "typecode": poi.get("typecode"),
                     },
                     ensure_ascii=False,
                     indent=2,
                 )
             )
-            geocode_result = _request(
-                session,
-                _ENDPOINTS["geo"],
-                _compact_params(address=address, city=city or args.region),
-                key=key,
-                timeout=args.timeout,
-            )
-            _print_geocode_level(geocode_result)
+            level = _print_poi_level(search_result, query=args.keywords)
+            if args.geocode_fallback and level["level_code"] == "unknown":
+                address, city, _ = _detailed_address_from_first_poi(search_result)
+                print("[fallback] typecode 无法确定层级，调用 geocode/geo。")
+                geocode_result = _request(
+                    session,
+                    _ENDPOINTS["geo"],
+                    _compact_params(address=address, city=city or args.region),
+                    key=key,
+                    timeout=args.timeout,
+                )
+                _print_geocode_level(geocode_result)
             return 0
 
         if args.command == "geo":

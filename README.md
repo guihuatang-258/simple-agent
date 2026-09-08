@@ -123,6 +123,7 @@ python -m scripts.amap_tool_smoke all --address "天津南站" --city "天津" -
 
 ```powershell
 python -m scripts.amap_rest_smoke text --keywords "北京大学" --types 141201 --region "北京市"
+python -m scripts.amap_rest_smoke text --keywords "太平洋" --geocode-fallback
 python -m scripts.amap_rest_smoke geo --address "天津南站" --city "天津"
 python -m scripts.amap_rest_smoke around --location "117.050646,39.050010" --keywords "停车场" --radius 1000
 python -m scripts.amap_rest_smoke detail --id "搜索接口返回的POI ID" --show-fields business
@@ -133,11 +134,14 @@ REST 脚本同样从 `.env` 读取 `AMAP_MAPS_API_KEY`，并且不会在请求�
 打印 Key。`--timeout` 需要写在子命令之前，例如
 `python -m scripts.amap_rest_smoke --timeout 30 text --keywords "北京大学"`。
 
-`text` 关键词检索会先取 `place/text` 第一条 POI，拼接省、市、区、地址和名称，
-再调用 `geocode/geo`；`[geo-level]` 只读取第二次响应的 `geocodes[0].level`。
+`text` 关键词检索默认只调用一次 `place/text`。程序先对照第一条结果的省、市、区
+字段，避免纯行政区名称被搜索联想成具体场所；然后从 POI 的 `typecode` 判断地理
+粒度。`190101` 到 `190109` 映射国家至村组级，`1903xx`、`1904xx` 视为区级
+以下的精确位置，其余带唯一 ID 和坐标的普通地点视为 POI 点位。
+无法稳定判断的自然地名、城市中心等 `190xxx` 返回 `unknown`；需要高德官方
+`level` 时可加 `--geocode-fallback`，仅在 `unknown` 时补调 `geocode/geo`。
 级别相对市级、区级的关系使用 `broader`（范围更大）、`same` 或 `finer`
-（范围更小、更精细）表示。直辖市的单独查询会从高德的“省”归一为业务市级，
-通用判断实现在 `scripts/geo_level.py`。
+（范围更小、更精细）表示，通用判断实现在 `scripts/geo_level.py`。
 
 ## 运行示例
 

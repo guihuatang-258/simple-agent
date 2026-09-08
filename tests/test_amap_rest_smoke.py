@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import unittest
+from argparse import Namespace
 from unittest.mock import Mock, patch
 
 from scripts.amap_rest_smoke import (
@@ -9,6 +10,7 @@ from scripts.amap_rest_smoke import (
     _first_poi_id,
     _location_from_geo,
     _request,
+    _run,
     _validate_text_search,
 )
 
@@ -76,6 +78,87 @@ class AMapRestSmokeTests(unittest.TestCase):
             session.get.call_args.kwargs["params"]["key"], "secret-key")
         output = " ".join(str(call) for call in mocked_print.call_args_list)
         self.assertNotIn("secret-key", output)
+
+    @patch("scripts.amap_rest_smoke._api_key", return_value="secret-key")
+    @patch("scripts.amap_rest_smoke._request")
+    def test_text_search_uses_one_request_by_default(self, request, _api_key):
+        request.return_value = {
+            "status": "1",
+            "pois": [
+                {
+                    "id": "B001",
+                    "name": "天津南站",
+                    "address": "柳静路",
+                    "location": "117.05,39.05",
+                    "typecode": "150200",
+                }
+            ],
+        }
+        args = Namespace(
+            command="text",
+            keywords="天津南站",
+            types="",
+            region="天津市",
+            city_limit=False,
+            page_size=None,
+            page_num=None,
+            show_fields="",
+            geocode_fallback=False,
+            timeout=15.0,
+        )
+
+        self.assertEqual(_run(args), 0)
+        self.assertEqual(request.call_count, 1)
+        self.assertEqual(
+            request.call_args.args[1],
+            "https://restapi.amap.com/v5/place/text",
+        )
+
+    @patch("scripts.amap_rest_smoke._api_key", return_value="secret-key")
+    @patch("scripts.amap_rest_smoke._request")
+    def test_text_search_can_fallback_for_ambiguous_typecode(
+        self, request, _api_key
+    ):
+        request.side_effect = [
+            {
+                "status": "1",
+                "pois": [
+                    {
+                        "id": "B002",
+                        "name": "某自然地名",
+                        "pname": "天津市",
+                        "cityname": "天津市",
+                        "adname": "西青区",
+                        "address": "示例地址",
+                        "location": "117.05,39.05",
+                        "typecode": "190203",
+                    }
+                ],
+            },
+            {
+                "status": "1",
+                "geocodes": [{"level": "兴趣点", "location": "117.05,39.05"}],
+            },
+        ]
+        args = Namespace(
+            command="text",
+            keywords="某自然地名",
+            types="",
+            region="天津市",
+            city_limit=False,
+            page_size=None,
+            page_num=None,
+            show_fields="",
+            geocode_fallback=True,
+            timeout=15.0,
+        )
+
+        self.assertEqual(_run(args), 0)
+        self.assertEqual(request.call_count, 2)
+        self.assertEqual(
+            request.call_args_list[1].args[1],
+            "https://restapi.amap.com/v3/geocode/geo",
+        )
 
 
 if __name__ == "__main__":

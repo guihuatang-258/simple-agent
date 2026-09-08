@@ -4,7 +4,9 @@ import unittest
 
 from scripts.geo_level import (
     classify_amap_location,
+    classify_amap_poi,
     classify_first_geocode,
+    classify_first_poi,
     compare_geographic_scope,
 )
 
@@ -59,21 +61,85 @@ class GeographicLevelTests(unittest.TestCase):
         self.assertEqual(result["level_code"], "township")
         self.assertEqual(result["relative_to_district"], "finer")
 
-    def test_place_result_is_not_used_as_geocode_level(self):
-        result = classify_first_geocode(
+    def test_place_result_is_classified_separately_from_geocode(self):
+        payload = {
+            "pois": [
+                {
+                    "id": "B001",
+                    "name": "天津南站",
+                    "location": "117.05,39.05",
+                    "typecode": "150200",
+                    "adname": "西青区",
+                }
+            ]
+        }
+
+        self.assertIsNone(classify_first_geocode(payload))
+        result = classify_first_poi(payload)
+
+        self.assertEqual(result["level_code"], "poi")
+        self.assertEqual(result["source"], "poi_typecode")
+        self.assertEqual(result["raw_typecode"], "150200")
+        self.assertTrue(result["is_district_or_finer"])
+
+    def test_administrative_place_typecodes_have_explicit_levels(self):
+        cases = {
+            "190102": "province",
+            "190103": "city",
+            "190104": "city",
+            "190105": "district",
+            "190106": "township",
+            "190107": "subdistrict",
+            "190108": "village",
+            "190109": "village_group",
+        }
+
+        for typecode, expected in cases.items():
+            with self.subTest(typecode=typecode):
+                result = classify_amap_poi({"typecode": typecode})
+                self.assertEqual(result["level_code"], expected)
+                self.assertEqual(result["source"], "poi_typecode")
+
+    def test_road_and_address_typecodes_are_finer_than_district(self):
+        road = classify_amap_poi({"typecode": "190302"})
+        address = classify_amap_poi({"typecode": "190403"})
+
+        self.assertEqual(road["level_code"], "precise_location")
+        self.assertEqual(address["level_code"], "address")
+        self.assertEqual(road["relative_to_district"], "finer")
+        self.assertEqual(address["relative_to_district"], "finer")
+
+    def test_ambiguous_place_name_typecode_stays_unknown(self):
+        result = classify_amap_poi(
             {
-                "pois": [
-                    {
-                        "id": "B001",
-                        "name": "天津南站",
-                        "location": "117.05,39.05",
-                        "adname": "西青区",
-                    }
-                ]
+                "id": "B002",
+                "name": "某自然地名",
+                "location": "117.05,39.05",
+                "typecode": "190203",
             }
         )
 
-        self.assertIsNone(result)
+        self.assertEqual(result["level_code"], "unknown")
+        self.assertEqual(result["source"], "poi_typecode_ambiguous")
+
+    def test_exact_admin_query_overrides_rewritten_poi_result(self):
+        result = classify_amap_poi(
+            {
+                "id": "B003",
+                "name": "北京市人民政府(旧址)",
+                "pname": "北京市",
+                "cityname": "北京市",
+                "adname": "东城区",
+                "location": "116.407387,39.904179",
+                "typecode": "130102",
+            },
+            query="北京市",
+        )
+
+        self.assertEqual(result["level_code"], "city")
+        self.assertEqual(result["source"], "query_admin_field")
+        self.assertEqual(result["relative_to_city"], "same")
+        self.assertEqual(result["relative_to_district"], "broader")
 
     def test_geocode_interest_point_level_is_supported(self):
         result = classify_first_geocode(
