@@ -31,7 +31,7 @@ _PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="不经过 MCP Server，直接测试高德 Web Service API。"
+        description="直接测试高德 Web Service API。"
     )
     parser.add_argument(
         "--timeout",
@@ -44,11 +44,11 @@ def _parser() -> argparse.ArgumentParser:
     text = subparsers.add_parser("text", help="测试 v5 地点关键字搜索。")
     text.add_argument("--keywords", default="", help="单个地点关键字，最长80字符。")
     text.add_argument("--types", default="", help="POI 分类码，多个用 | 分隔。")
-    text.add_argument("--region", default="", help="城市名、citycode 或 adcode。")
+    text.add_argument("--region", default="天津市", help="城市名、citycode 或 adcode。")
     text.add_argument(
         "--city-limit", action="store_true", help="严格限制在 region 范围内。"
     )
-    text.add_argument("--page-size", type=int, default=None, help="每页记录数。")
+    text.add_argument("--page-size", type=int, default=3, help="每页记录数。")
     text.add_argument("--page-num", type=int, default=None, help="页码。")
     text.add_argument("--show-fields", default="", help="需要额外返回的字段。")
     text.add_argument(
@@ -69,7 +69,7 @@ def _parser() -> argparse.ArgumentParser:
     around.add_argument("--types", default="", help="POI 分类码，多个用 | 分隔。")
     around.add_argument("--radius", default="1000", help="搜索半径，默认1000米。")
     around.add_argument("--region", default="", help="城市名、citycode 或 adcode。")
-    around.add_argument("--page-size", type=int, default=None, help="每页记录数。")
+    around.add_argument("--page-size", type=int, default=3, help="每页记录数。")
     around.add_argument("--page-num", type=int, default=None, help="页码。")
     around.add_argument("--show-fields", default="", help="需要额外返回的字段。")
 
@@ -260,7 +260,8 @@ def _run(args: argparse.Namespace) -> int:
             )
             level = _print_poi_level(search_result, query=args.keywords)
             if args.geocode_fallback and level["level_code"] == "unknown":
-                address, city, _ = _detailed_address_from_first_poi(search_result)
+                address, city, _ = _detailed_address_from_first_poi(
+                    search_result)
                 print("[fallback] typecode 无法确定层级，调用 geocode/geo。")
                 geocode_result = _request(
                     session,

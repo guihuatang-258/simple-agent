@@ -87,7 +87,8 @@ class AMapWebServiceClient:
             else _positive_timeout("AMAP_READ_TIMEOUT", 5.0),
         )
         self._cache_size = max(0, cache_size)
-        self._cache: OrderedDict[tuple[str, str], dict[str, Any]] = OrderedDict()
+        self._cache: OrderedDict[tuple[str, str],
+                                 dict[str, Any]] = OrderedDict()
         self._cache_lock = threading.Lock()
         self._thread_local = threading.local()
         # session 参数仅用于测试或外部注入；生产环境默认使用线程本地连接池。
@@ -156,6 +157,7 @@ class AMapWebServiceClient:
             params.update({"region": city, "city_limit": "true"})
 
         started = time.perf_counter()
+        # 调用 GET 请求
         try:
             response = self._session().get(
                 _PLACE_TEXT_ENDPOINT,
