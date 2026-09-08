@@ -18,6 +18,7 @@ from mcp_tools import load_amap_store_tools
 
 
 _TOOL_NAMES = ("maps_geo", "maps_around_search", "maps_search_detail")
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -189,7 +190,7 @@ async def _run(args: argparse.Namespace) -> int:
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    load_dotenv(Path(__file__).resolve().with_name(".env"))
+    load_dotenv(_PROJECT_ROOT / ".env")
     args = _parser().parse_args(argv)
     try:
         return asyncio.run(_run(args))

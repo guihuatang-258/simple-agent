@@ -29,6 +29,7 @@ _AMAP_LEVEL_MAP = {
     "热点商圈": "neighborhood",
     "道路": "street",
     "道路交叉口": "street",
+    "门址": "address",
     "门牌号": "address",
     "单元号": "address",
     "兴趣点": "poi",
@@ -127,10 +128,10 @@ def classify_amap_location(record: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def classify_first_amap_result(payload: dict[str, Any]) -> dict[str, Any] | None:
-    """Classify the first geocode or POI in a complete AMap response."""
+def classify_first_geocode(payload: dict[str, Any]) -> dict[str, Any] | None:
+    """Classify geocodes[0]; place search results are intentionally excluded."""
 
-    candidates = payload.get("geocodes") or payload.get("pois") or []
+    candidates = payload.get("geocodes") or []
     if not isinstance(candidates, list):
         return None
     first = next((item for item in candidates if isinstance(item, dict)), None)

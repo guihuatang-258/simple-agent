@@ -14,7 +14,10 @@ from typing import Any
 import requests
 from dotenv import load_dotenv
 
-from geo_level import classify_first_amap_result
+try:
+    from .geo_level import classify_first_geocode
+except ImportError:
+    from geo_level import classify_first_geocode
 
 
 _ENDPOINTS = {
@@ -23,6 +26,7 @@ _ENDPOINTS = {
     "around": "https://restapi.amap.com/v5/place/around",
     "detail": "https://restapi.amap.com/v5/place/detail",
 }
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -97,7 +101,8 @@ def _compact_params(**values: Any) -> dict[str, str]:
     for name, value in values.items():
         if value is None or value == "" or value is False:
             continue
-        params[name] = str(value).lower() if isinstance(value, bool) else str(value)
+        params[name] = str(value).lower() if isinstance(
+            value, bool) else str(value)
     return params
 
 
@@ -147,11 +152,46 @@ def _request(
         info = payload.get("info") or "unknown error"
         infocode = payload.get("infocode") or "unknown"
         raise RuntimeError(f"高德业务请求失败：{info}（{infocode}）")
-    level = classify_first_amap_result(payload)
-    if level:
-        print("[geo-level]")
-        print(json.dumps(level, ensure_ascii=False, indent=2))
     return payload
+
+
+def _text_value(value: Any) -> str:
+    return value.strip() if isinstance(value, str) else ""
+
+
+def _first_poi(payload: dict[str, Any]) -> dict[str, Any]:
+    pois = payload.get("pois") or []
+    if isinstance(pois, list):
+        for poi in pois:
+            if isinstance(poi, dict):
+                return poi
+    raise RuntimeError("地点搜索没有返回可用于地理编码的 POI。")
+
+
+def _detailed_address_from_first_poi(
+    payload: dict[str, Any],
+) -> tuple[str, str, dict[str, Any]]:
+    """Build one geocodable address from the first place/text POI."""
+
+    poi = _first_poi(payload)
+    parts = []
+    for field in ("pname", "cityname", "adname", "address", "name"):
+        value = _text_value(poi.get(field))
+        if value and value not in parts and value not in "".join(parts):
+            parts.append(value)
+    address = "".join(parts)
+    if not address:
+        raise RuntimeError("第一条 POI 缺少可用于地理编码的详细地址。")
+    city = _text_value(poi.get("cityname")) or _text_value(poi.get("pname"))
+    return address, city, poi
+
+
+def _print_geocode_level(payload: dict[str, Any]) -> None:
+    level = classify_first_geocode(payload)
+    if level is None:
+        raise RuntimeError("geocode/geo 没有返回可判断的 geocodes[0]。")
+    print("[geo-level]")
+    print(json.dumps(level, ensure_ascii=False, indent=2))
 
 
 def _location_from_geo(payload: dict[str, Any]) -> str:
@@ -186,12 +226,39 @@ def _run(args: argparse.Namespace) -> int:
                 show_fields=args.show_fields,
             )
             _validate_text_search(params)
-            _request(session, _ENDPOINTS["text"], params, key=key, timeout=args.timeout)
+            search_result = _request(
+                session, _ENDPOINTS["text"], params, key=key, timeout=args.timeout
+            )
+            address, city, poi = _detailed_address_from_first_poi(search_result)
+            print("[selected-place]")
+            print(
+                json.dumps(
+                    {
+                        "id": poi.get("id"),
+                        "name": poi.get("name"),
+                        "source_address": poi.get("address"),
+                        "geocode_address": address,
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                )
+            )
+            geocode_result = _request(
+                session,
+                _ENDPOINTS["geo"],
+                _compact_params(address=address, city=city or args.region),
+                key=key,
+                timeout=args.timeout,
+            )
+            _print_geocode_level(geocode_result)
             return 0
 
         if args.command == "geo":
             params = _compact_params(address=args.address, city=args.city)
-            _request(session, _ENDPOINTS["geo"], params, key=key, timeout=args.timeout)
+            result = _request(
+                session, _ENDPOINTS["geo"], params, key=key, timeout=args.timeout
+            )
+            _print_geocode_level(result)
             return 0
 
         if args.command == "around":
@@ -205,12 +272,14 @@ def _run(args: argparse.Namespace) -> int:
                 page_num=args.page_num,
                 show_fields=args.show_fields,
             )
-            _request(session, _ENDPOINTS["around"], params, key=key, timeout=args.timeout)
+            _request(session, _ENDPOINTS["around"],
+                     params, key=key, timeout=args.timeout)
             return 0
 
         if args.command == "detail":
             params = _compact_params(id=args.id, show_fields=args.show_fields)
-            _request(session, _ENDPOINTS["detail"], params, key=key, timeout=args.timeout)
+            _request(session, _ENDPOINTS["detail"],
+                     params, key=key, timeout=args.timeout)
             return 0
 
         geo = _request(
@@ -220,6 +289,7 @@ def _run(args: argparse.Namespace) -> int:
             key=key,
             timeout=args.timeout,
         )
+        _print_geocode_level(geo)
         location = _location_from_geo(geo)
         around_params = _compact_params(
             location=location,
@@ -246,7 +316,7 @@ def _run(args: argparse.Namespace) -> int:
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    load_dotenv(Path(__file__).resolve().with_name(".env"))
+    load_dotenv(_PROJECT_ROOT / ".env")
     args = _parser().parse_args(argv)
     try:
         return _run(args)

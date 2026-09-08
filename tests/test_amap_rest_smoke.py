@@ -3,8 +3,9 @@ from __future__ import annotations
 import unittest
 from unittest.mock import Mock, patch
 
-from amap_rest_smoke import (
+from scripts.amap_rest_smoke import (
     _compact_params,
+    _detailed_address_from_first_poi,
     _first_poi_id,
     _location_from_geo,
     _request,
@@ -35,6 +36,26 @@ class AMapRestSmokeTests(unittest.TestCase):
         )
         self.assertEqual(_first_poi_id({"pois": [{"id": "B001"}]}), "B001")
 
+    def test_first_text_result_builds_detailed_geocode_address(self):
+        address, city, poi = _detailed_address_from_first_poi(
+            {
+                "pois": [
+                    {
+                        "id": "B000A816R6",
+                        "pname": "北京市",
+                        "cityname": "北京市",
+                        "adname": "海淀区",
+                        "address": "颐和园路5号",
+                        "name": "北京大学",
+                    }
+                ]
+            }
+        )
+
+        self.assertEqual(address, "北京市海淀区颐和园路5号北京大学")
+        self.assertEqual(city, "北京市")
+        self.assertEqual(poi["id"], "B000A816R6")
+
     @patch("builtins.print")
     def test_request_adds_key_but_does_not_log_it(self, mocked_print):
         response = Mock(status_code=200)
@@ -51,7 +72,8 @@ class AMapRestSmokeTests(unittest.TestCase):
         )
 
         self.assertEqual(result["status"], "1")
-        self.assertEqual(session.get.call_args.kwargs["params"]["key"], "secret-key")
+        self.assertEqual(
+            session.get.call_args.kwargs["params"]["key"], "secret-key")
         output = " ".join(str(call) for call in mocked_print.call_args_list)
         self.assertNotIn("secret-key", output)
 

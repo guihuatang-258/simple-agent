@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import unittest
 
-from amap_tool_smoke import _first_poi_id, _location_from_geo, _result_payload
+from scripts.amap_tool_smoke import _first_poi_id, _location_from_geo, _result_payload
 
 
 class AMapToolSmokeTests(unittest.TestCase):

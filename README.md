@@ -112,32 +112,32 @@ WebServiceAPI 并具有相关接口配额。可设置 `TENCENT_MCP_FORMAT=0`（�
 不会打印 API Key：
 
 ```powershell
-python amap_tool_smoke.py schema
-python amap_tool_smoke.py geo --address "天津南站" --city "天津"
-python amap_tool_smoke.py around --location "117.050646,39.050010" --keywords "停车场" --radius 1000
-python amap_tool_smoke.py detail --id "周边搜索返回的POI ID"
-python amap_tool_smoke.py all --address "天津南站" --city "天津" --keywords "停车场"
+python -m scripts.amap_tool_smoke schema
+python -m scripts.amap_tool_smoke geo --address "天津南站" --city "天津"
+python -m scripts.amap_tool_smoke around --location "117.050646,39.050010" --keywords "停车场" --radius 1000
+python -m scripts.amap_tool_smoke detail --id "周边搜索返回的POI ID"
+python -m scripts.amap_tool_smoke all --address "天津南站" --city "天津" --keywords "停车场"
 ```
 
 不启动 MCP Server、直接调用高德 Web Service REST API 时，使用：
 
 ```powershell
-python amap_rest_smoke.py text --keywords "北京大学" --types 141201 --region "北京市"
-python amap_rest_smoke.py geo --address "天津南站" --city "天津"
-python amap_rest_smoke.py around --location "117.050646,39.050010" --keywords "停车场" --radius 1000
-python amap_rest_smoke.py detail --id "搜索接口返回的POI ID" --show-fields business
-python amap_rest_smoke.py all --address "天津南站" --city "天津" --keywords "停车场"
+python -m scripts.amap_rest_smoke text --keywords "北京大学" --types 141201 --region "北京市"
+python -m scripts.amap_rest_smoke geo --address "天津南站" --city "天津"
+python -m scripts.amap_rest_smoke around --location "117.050646,39.050010" --keywords "停车场" --radius 1000
+python -m scripts.amap_rest_smoke detail --id "搜索接口返回的POI ID" --show-fields business
+python -m scripts.amap_rest_smoke all --address "天津南站" --city "天津" --keywords "停车场"
 ```
 
 REST 脚本同样从 `.env` 读取 `AMAP_MAPS_API_KEY`，并且不会在请求日志或错误信息中
 打印 Key。`--timeout` 需要写在子命令之前，例如
-`python amap_rest_smoke.py --timeout 30 text --keywords "北京大学"`。
+`python -m scripts.amap_rest_smoke --timeout 30 text --keywords "北京大学"`。
 
-每个 REST 查询结果还会输出 `[geo-level]`，按地理覆盖范围判断首条结果相对市级、
-区级是 `broader`（范围更大）、`same` 还是 `finer`（范围更小、更精细）。判断优先
-使用高德 `level`，未知时再根据 POI、门牌、道路、乡镇、区、市、省等非空字段推断。
-直辖市的单独查询会从高德的“省”归一为业务市级。通用判断实现在
-`geo_level.py`。
+`text` 关键词检索会先取 `place/text` 第一条 POI，拼接省、市、区、地址和名称，
+再调用 `geocode/geo`；`[geo-level]` 只读取第二次响应的 `geocodes[0].level`。
+级别相对市级、区级的关系使用 `broader`（范围更大）、`same` 或 `finer`
+（范围更小、更精细）表示。直辖市的单独查询会从高德的“省”归一为业务市级，
+通用判断实现在 `scripts/geo_level.py`。
 
 ## 运行示例
 
