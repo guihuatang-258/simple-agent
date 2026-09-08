@@ -66,6 +66,18 @@ Graph 设置 `conversation_ended=true`，CLI 结束当前会话。
 [执行路径] START -> route(decision=rule, rule_id=rental-process-concern) -> rule(source=regex_rule, rule_id=rental-process-concern) -> END
 ```
 
+静态 Graph 可以通过独立脚本导出。默认通过 Mermaid 服务生成 PNG；Mermaid 文本
+输出不需要联网：
+
+```powershell
+python visualize_graph.py
+python visualize_graph.py --format mermaid
+python visualize_graph.py --format mermaid -o customer-service-graph.mmd
+```
+
+终端 ASCII 模式使用 `python visualize_graph.py --format ascii`，需要额外安装
+`grandalf`。
+
 ## 网点和营销数据
 
 POC 租车网点保存在 `data/branches.json`。入口判定为网点查询后，Graph 直接调用
