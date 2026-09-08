@@ -133,6 +133,12 @@ REST 脚本同样从 `.env` 读取 `AMAP_MAPS_API_KEY`，并且不会在请求�
 打印 Key。`--timeout` 需要写在子命令之前，例如
 `python amap_rest_smoke.py --timeout 30 text --keywords "北京大学"`。
 
+每个 REST 查询结果还会输出 `[geo-level]`，按地理覆盖范围判断首条结果相对市级、
+区级是 `broader`（范围更大）、`same` 还是 `finer`（范围更小、更精细）。判断优先
+使用高德 `level`，未知时再根据 POI、门牌、道路、乡镇、区、市、省等非空字段推断。
+直辖市的单独查询会从高德的“省”归一为业务市级。通用判断实现在
+`geo_level.py`。
+
 ## 运行示例
 
 ```powershell

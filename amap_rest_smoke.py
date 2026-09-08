@@ -14,6 +14,8 @@ from typing import Any
 import requests
 from dotenv import load_dotenv
 
+from geo_level import classify_first_amap_result
+
 
 _ENDPOINTS = {
     "text": "https://restapi.amap.com/v5/place/text",
@@ -145,6 +147,10 @@ def _request(
         info = payload.get("info") or "unknown error"
         infocode = payload.get("infocode") or "unknown"
         raise RuntimeError(f"高德业务请求失败：{info}（{infocode}）")
+    level = classify_first_amap_result(payload)
+    if level:
+        print("[geo-level]")
+        print(json.dumps(level, ensure_ascii=False, indent=2))
     return payload
 
 
