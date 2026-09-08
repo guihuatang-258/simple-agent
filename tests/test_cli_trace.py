@@ -51,6 +51,34 @@ class CliExecutionPathTests(unittest.TestCase):
         _append_execution_path({"__interrupt__": ()}, path)
         self.assertEqual(path, ["START"])
 
+    def test_branch_path_includes_web_service_performance_details(self):
+        path = ["START"]
+        _append_execution_path(
+            {
+                "branch": {
+                    "messages": [
+                        AIMessage(
+                            content="branch answer",
+                            additional_kwargs={
+                                "response_source": "branch_workflow",
+                                "map_provider": "amap_web_service",
+                                "map_level": "poi",
+                                "map_elapsed_ms": 228,
+                                "map_cache_hit": False,
+                            },
+                        )
+                    ]
+                }
+            },
+            path,
+        )
+
+        self.assertEqual(
+            path[-1],
+            "branch(source=branch_workflow, map=amap_web_service, "
+            "level=poi, map_ms=228, cache=miss)",
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

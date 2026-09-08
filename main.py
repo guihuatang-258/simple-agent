@@ -6,15 +6,17 @@ import asyncio
 import sys
 import time
 import uuid
+from collections.abc import Callable, Sequence
+from contextlib import AbstractAsyncContextManager
 from pathlib import Path
 
 from dotenv import load_dotenv
-
-from collections.abc import Callable, Sequence
 from langchain_core.tools import BaseTool
 
 from agent import DEFAULT_TOOLS, build_agent
-from mcp_tools import MCPToolLoader, load_selected_tools
+
+
+ToolLoader = Callable[[], AbstractAsyncContextManager[list[BaseTool]]]
 
 load_dotenv(Path(__file__).resolve().parent / ".env")
 
@@ -79,6 +81,16 @@ def _execution_path_label(node: str, update: object) -> str:
                 details.append(f"source={source}")
             if rule_id:
                 details.append(f"rule_id={rule_id}")
+            if metadata.get("map_provider"):
+                details.append(f"map={metadata['map_provider']}")
+            if metadata.get("map_level"):
+                details.append(f"level={metadata['map_level']}")
+            if metadata.get("map_elapsed_ms") is not None:
+                details.append(f"map_ms={metadata['map_elapsed_ms']}")
+            if "map_cache_hit" in metadata:
+                details.append(
+                    "cache=hit" if metadata["map_cache_hit"] else "cache=miss"
+                )
 
     return f"{node}({', '.join(details)})" if details else node
 
@@ -218,10 +230,18 @@ async def _chat(
     *,
     builder: Callable = build_agent,
     title: str = "简易 Agent 已启动。输入问题开始对话，exit / quit 退出。",
-    tools: Sequence[BaseTool | MCPToolLoader] | None = None,
+    tools: Sequence[BaseTool | ToolLoader] | None = None,
 ) -> None:
-    # [] 表示不加载工具；None 使用 agent.py 中的默认配置。
+    # 默认 Web Service 路径没有外部工具加载器，避免导入 MCP 适配器的启动开销。
     selection = DEFAULT_TOOLS if tools is None else tools
+    if all(isinstance(entry, BaseTool) for entry in selection):
+        agent = builder(list(selection))
+        await _chat_loop(agent, prompt, title)
+        return
+
+    # 保留显式传入第三方 MCP loader 的兼容入口，但默认网点流程不会执行这里。
+    from mcp_tools import load_selected_tools
+
     async with load_selected_tools(selection) as loaded_tools:
         agent = builder(loaded_tools)
         await _chat_loop(agent, prompt, title)
@@ -232,9 +252,9 @@ def chat(
     *,
     builder: Callable = build_agent,
     title: str = "简易 Agent 已启动。输入问题开始对话，exit / quit 退出。",
-    tools: Sequence[BaseTool | MCPToolLoader] | None = None,
+    tools: Sequence[BaseTool | ToolLoader] | None = None,
 ) -> None:
-    """同步 CLI 入口；内部事件循环用于模型和 MCP 工具的异步流式调用。"""
+    """同步 CLI 入口；内部事件循环用于模型和节点的异步流式调用。"""
 
     asyncio.run(
         _chat(

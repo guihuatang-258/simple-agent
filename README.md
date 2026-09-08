@@ -6,7 +6,7 @@
 
 - LLM 入口分类：网点查询、转人工、其他 FAQ、结束会话
 - 多轮状态：`InMemorySaver` + `thread_id`
-- 高德官方 MCP 地址解析
+- 高德 Web Service 地址解析，单次请求并带进程内缓存
 - POC 网点服务：预设网点距离排序、营业判断、合规旺季话术
 - 规则话术：Excel 前三个类别共 11 条，每条支持多条正则
 - 受限兜底：本地召回 Top-3 候选，LLM 只选规则 ID，代码返回标准话术
@@ -29,9 +29,10 @@ copy .env.example .env
 并填写 `OPENAI_BASE_URL`。
 
 网点查询需要高德“Web 服务 API”类型的 Key，并在 `.env` 中设置
-`AMAP_MAPS_API_KEY`。程序通过 `npx -y @amap/amap-maps-mcp-server` 启动高德
-官方 MCP Server，因此还需安装 Node.js 22.14 或更高版本。未配置 Key 时会跳过
-地图工具，规则话术和转人工流程仍可使用。
+`AMAP_MAPS_API_KEY`。Graph 在进程内直接调用高德 `place/text`，不启动 MCP Server，
+也不要求安装 Node.js。未配置 Key 或地图服务异常时，网点节点会询问是否转人工；
+规则话术和其它流程仍可使用。连接和读取超时可分别通过
+`AMAP_CONNECT_TIMEOUT`、`AMAP_READ_TIMEOUT` 调整，默认是 3 秒和 5 秒。
 
 ## 对话路由
 
@@ -39,7 +40,7 @@ copy .env.example .env
 
 ```text
 START -> LLM intent router
-  ├─ branch_query  -> branch tools -> END
+  ├─ branch_query  -> AMap Web Service -> local branch policy -> END
   ├─ human_handoff -> handoff tool -> END
   ├─ faq           -> regex rule / bounded fallback -> END
   └─ goodbye       -> END
@@ -81,32 +82,28 @@ python visualize_graph.py --format mermaid -o customer-service-graph.mmd
 ## 网点和营销数据
 
 POC 租车网点保存在 `data/branches.json`。入口判定为网点查询后，Graph 直接调用
-高德地址解析工具和本地网点推荐工具，完成 GCJ-02 坐标解析、距离排序和营业判断。
+高德 `place/text`，根据首条结果的 `typecode` 和坐标完成地理粒度判断，再由本地
+函数完成距离排序和营业判断。每次定位最多发送一次地图请求；同一进程内重复地址
+会命中最多 128 条的 LRU 缓存。行政区级或更粗的地址不会直接计算距离，而是继续
+询问道路、门牌或附近地标。
 营销开关及审核话术保存在 `data/marketing_policy.json`。
 
 两个示例网点尚未提供联系电话，因此对应字段为 `null`，程序不会生成虚构号码。
 `request_human_handoff` 当前只生成带请求 ID 的 POC 转接事件，并且要求用户明确
 选择转人工；它尚未连接真实呼叫中心或在线客服平台。
 
-## 地图工具选择
+## 地图调用性能
 
-默认地图服务在 `agent.py` 的 `DEFAULT_TOOLS` 中选择。高德与腾讯分别为
-`load_amap_store_tools`、`load_tencent_tools`。也可以通过 `chat` 的 `tools` 参数
-指定，加载函数不要加括号：
+`branch` 节点复用 `AMapWebServiceClient`，HTTP 请求在线程池中执行，不阻塞
+LangGraph 事件循环；客户端按线程复用 `requests.Session` 的连接池。命令行的
+执行路径会打印地图提供方、判断级别、接口耗时和缓存状态，例如：
 
-```python
-from main import chat
-from mcp_tools import load_amap_store_tools, load_tencent_tools
-
-chat(tools=[load_amap_store_tools])
-# chat(tools=[load_tencent_tools])
-# chat(tools=[load_amap_store_tools, load_tencent_tools])
-# chat(tools=[])
+```text
+branch(source=branch_workflow, map=amap_web_service, level=poi, map_ms=185, cache=miss)
 ```
 
-腾讯位置服务需要在 `.env` 中设置 `TENCENT_MAPS_API_KEY`。该 Key 需开通
-WebServiceAPI 并具有相关接口配额。可设置 `TENCENT_MCP_FORMAT=0`（语义化文本）
-或 `1`（原始 JSON）。
+`mcp_tools.py` 和 `scripts/amap_tool_smoke.py` 仅保留为独立实验脚本，不参与 Graph
+默认启动和网点查询链路。
 
 高德 MCP 的三个工具可以通过独立脚本分别测试；输出包含调用参数、耗时和结果，
 不会打印 API Key：

@@ -13,9 +13,10 @@ from langchain_core.tools import BaseTool
 from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.graph import END, START, MessagesState, StateGraph
 
+from amap_web_service import AMapWebServiceClient
 from branch_tools import (
-    get_compliant_marketing_message,
-    recommend_nearby_branch,
+    get_compliant_marketing_message_data,
+    recommend_nearby_branch_data,
     request_human_handoff,
 )
 from dashscope_chat import build_dashscope_model
@@ -24,15 +25,11 @@ from dialogue_rules import (
     match_dialogue_rule,
     retrieve_rule_candidates,
 )
-from mcp_tools import load_amap_store_tools, load_tencent_tools
 from openai_chat import build_openai_model
 
 
-# MCP加载函数不加括号；网点、营销和转人工由显式Graph节点确定性调用。
-DEFAULT_TOOLS = [
-    load_amap_store_tools,
-    # load_tencent_tools,
-]
+# 网点节点直接调用高德 Web Service；默认启动不再加载 MCP Server。
+DEFAULT_TOOLS: tuple[BaseTool, ...] = ()
 
 _NATIVE_PROVIDERS = {"dashscope", "tongyi", "qwen"}
 _INTENTS = {"branch_query", "human_handoff", "faq", "goodbye"}
@@ -298,41 +295,6 @@ def _heuristic_address(user_text: str, pending: bool) -> str:
     return ""
 
 
-def _tool_result_text(result: Any) -> str:
-    if isinstance(result, str):
-        return result
-    if isinstance(result, list):
-        return "\n".join(
-            str(item.get("text", "")) if isinstance(item, dict) else str(item)
-            for item in result
-        )
-    if isinstance(result, dict) and "text" in result:
-        return str(result["text"])
-    return str(result)
-
-
-def _coordinates_from_geo_result(result: Any) -> tuple[float, float] | None:
-    text = _tool_result_text(result)
-    payload = _parse_json_object(text)
-    candidates = payload.get("return") or payload.get("geocodes") or []
-    if isinstance(candidates, list):
-        for candidate in candidates:
-            if not isinstance(candidate, dict):
-                continue
-            location = str(candidate.get("location", ""))
-            match = re.fullmatch(
-                r"\s*(-?\d+(?:\.\d+)?)\s*[,，]\s*(-?\d+(?:\.\d+)?)\s*",
-                location,
-            )
-            if match:
-                return float(match.group(1)), float(match.group(2))
-    match = re.search(
-        r"(?<!\d)(-?\d{2,3}\.\d+)\s*[,，]\s*(-?\d{1,2}\.\d+)(?!\d)",
-        text,
-    )
-    return (float(match.group(1)), float(match.group(2))) if match else None
-
-
 def _city_hint(address: str) -> str | None:
     match = re.search(r"([\u4e00-\u9fff]{2,8}市)", address)
     if match:
@@ -361,10 +323,7 @@ def _branch_response(result: dict[str, Any]) -> tuple[str, str | None]:
                 f"营业时间：{recommended['business_hours']}，{status}",
             ]
         )
-        marketing = json.loads(
-            get_compliant_marketing_message.invoke(
-                {"scenario": "branch_query"})
-        )
+        marketing = get_compliant_marketing_message_data("branch_query")
         if marketing.get("should_speak") and marketing.get("message"):
             lines.extend(["", marketing["message"]])
         return "\n".join(lines), None
@@ -376,7 +335,7 @@ def _branch_response(result: dict[str, Any]) -> tuple[str, str | None]:
 async def _branch_node(
     state: CustomerServiceState,
     *,
-    tool_map: dict[str, BaseTool],
+    amap_client: AMapWebServiceClient,
 ) -> dict[str, Any]:
     user_text = _latest_user_text(state)
     pending = state.get("pending_intent") == "branch_address"
@@ -388,32 +347,39 @@ async def _branch_node(
             "pending_intent": "branch_address",
         }
 
-    geo_tool = tool_map.get("maps_geo")
-    if geo_tool is None:
+    try:
+        location = await amap_client.resolve_location(
+            address,
+            city=_city_hint(address) or "",
+        )
+    except Exception:
         return {
-            "messages": [AIMessage(content="地址解析服务暂未配置，需要我为您转接人工客服吗？")],
+            "messages": [AIMessage(content="地址解析服务暂时不可用，需要我为您转接人工客服吗？")],
             "pending_intent": "handoff_confirmation",
         }
-    arguments = {"address": address}
-    city = _city_hint(address)
-    if city:
-        arguments["city"] = city
-    try:
-        geo_result = await geo_tool.ainvoke(arguments)
-        coordinates = _coordinates_from_geo_result(geo_result)
-    except Exception:
-        coordinates = None
-    if coordinates is None:
+
+    classification = location["classification"]
+    if classification.get("relative_to_district") != "finer":
         return {
-            "messages": [AIMessage(content="暂时无法定位这个地址，请提供更详细的区、道路或地标信息。")],
+            "messages": [
+                AIMessage(
+                    content="这个位置范围较大，请提供更详细的道路、门牌或附近地标。",
+                    additional_kwargs={
+                        "response_source": "branch_address_refinement",
+                        "map_provider": "amap_web_service",
+                        "map_level": classification.get("level_code"),
+                        "map_elapsed_ms": location.get("elapsed_ms"),
+                        "map_cache_hit": location.get("cache_hit", False),
+                    },
+                )
+            ],
             "pending_intent": "branch_address",
         }
 
     try:
-        recommendation = json.loads(
-            await recommend_nearby_branch.ainvoke(
-                {"longitude": coordinates[0], "latitude": coordinates[1]}
-            )
+        recommendation = recommend_nearby_branch_data(
+            location["longitude"],
+            location["latitude"],
         )
     except Exception:
         recommendation = {"status": "error"}
@@ -427,7 +393,13 @@ async def _branch_node(
         "messages": [
             AIMessage(
                 content=response,
-                additional_kwargs={"response_source": "branch_workflow"},
+                additional_kwargs={
+                    "response_source": "branch_workflow",
+                    "map_provider": "amap_web_service",
+                    "map_level": classification.get("level_code"),
+                    "map_elapsed_ms": location.get("elapsed_ms"),
+                    "map_cache_hit": location.get("cache_hit", False),
+                },
             )
         ],
         "pending_intent": next_intent,
@@ -501,17 +473,23 @@ async def _fallback_node(
     }
 
 
-def build_agent(tools: Sequence[BaseTool] = (), *, model=None):
+def build_agent(
+    tools: Sequence[BaseTool] = (),
+    *,
+    model=None,
+    amap_client: AMapWebServiceClient | None = None,
+):
     """Build one-turn routing graph; the checkpointer carries state across turns."""
 
+    del tools
     selected_model = model or _build_model()
-    tool_map = {tool.name: tool for tool in tools}
+    location_client = amap_client or AMapWebServiceClient()
 
     async def route_node(state: CustomerServiceState):
         return await _route_request(state, model=selected_model)
 
     async def branch_node(state: CustomerServiceState):
-        return await _branch_node(state, tool_map=tool_map)
+        return await _branch_node(state, amap_client=location_client)
 
     async def fallback_node(state: CustomerServiceState):
         return await _fallback_node(state, model=selected_model)

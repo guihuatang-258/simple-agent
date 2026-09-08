@@ -1,11 +1,9 @@
 from __future__ import annotations
 
 import asyncio
-import json
 import unittest
 import uuid
 
-from langchain.tools import tool
 from langchain_core.messages import AIMessage
 
 from agent import build_agent
@@ -28,6 +26,27 @@ class FakeModel:
         self.calls += 1
         content = self.responses.pop(0) if self.responses else '{"rule_id": null}'
         return AIMessage(content=content)
+
+
+class FakeAMapClient:
+    def __init__(self, *, level: str = "poi", relative: str = "finer"):
+        self.calls: list[tuple[str, str]] = []
+        self.level = level
+        self.relative = relative
+
+    async def resolve_location(self, address: str, city: str = ""):
+        self.calls.append((address, city))
+        return {
+            "status": "ok",
+            "longitude": 117.050646,
+            "latitude": 39.050010,
+            "classification": {
+                "level_code": self.level,
+                "relative_to_district": self.relative,
+            },
+            "cache_hit": False,
+            "elapsed_ms": 20,
+        }
 
 
 def invoke(graph, text: str, thread_id: str | None = None):
@@ -116,22 +135,14 @@ class CustomerServiceGraphTests(unittest.TestCase):
         self.assertEqual(model.calls, 1)
 
     def test_branch_address_is_collected_across_turns(self):
-        @tool
-        def maps_geo(address: str, city: str = "") -> str:
-            """Test geocoder."""
-            del address, city
-            return json.dumps(
-                {"return": [{"location": "117.050646,39.050010"}]},
-                ensure_ascii=False,
-            )
-
+        amap_client = FakeAMapClient()
         model = FakeModel(
             [
                 '{"intent":"branch_query","address":"","handoff_decision":"unknown"}',
                 '{"intent":"branch_query","address":"天津南站","handoff_decision":"unknown"}',
             ]
         )
-        graph = build_agent([maps_geo], model=model)
+        graph = build_agent([], model=model, amap_client=amap_client)
         thread_id = uuid.uuid4().hex
         first = invoke(graph, "帮我查一下最近的网点", thread_id)
         self.assertEqual(first["pending_intent"], "branch_address")
@@ -140,25 +151,41 @@ class CustomerServiceGraphTests(unittest.TestCase):
         self.assertEqual(final.additional_kwargs["response_source"], "branch_workflow")
         self.assertIn("天津南站服务点", final.content)
         self.assertEqual(model.calls, 2)
+        self.assertEqual(amap_client.calls, [("天津南站", "天津")])
 
     def test_entry_classifier_sends_branch_query_directly_to_tools(self):
-        @tool
-        def maps_geo(address: str, city: str = "") -> str:
-            """Test geocoder."""
-            del address, city
-            return json.dumps({"return": [{"location": "117.050646,39.050010"}]})
-
+        amap_client = FakeAMapClient()
         model = FakeModel(
             [
                 '{"intent":"branch_query","address":"天津南站","handoff_decision":"unknown"}',
             ]
         )
-        graph = build_agent([maps_geo], model=model)
+        graph = build_agent([], model=model, amap_client=amap_client)
         result = invoke(graph, "天津南站周围可以办理提车吗")
         final = result["messages"][-1]
         self.assertEqual(final.additional_kwargs["response_source"], "branch_workflow")
         self.assertIn("天津南站服务点", final.content)
         self.assertEqual(model.calls, 1)
+
+    def test_branch_query_requests_detail_for_coarse_location(self):
+        amap_client = FakeAMapClient(level="city", relative="same")
+        model = FakeModel(
+            [
+                '{"intent":"branch_query","address":"天津市",'
+                '"handoff_decision":"unknown"}',
+            ]
+        )
+        graph = build_agent([], model=model, amap_client=amap_client)
+
+        result = invoke(graph, "天津市哪个网点最近")
+        final = result["messages"][-1]
+
+        self.assertEqual(result["pending_intent"], "branch_address")
+        self.assertEqual(
+            final.additional_kwargs["response_source"],
+            "branch_address_refinement",
+        )
+        self.assertIn("位置范围较大", final.content)
 
 
 if __name__ == "__main__":

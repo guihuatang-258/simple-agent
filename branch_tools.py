@@ -255,33 +255,41 @@ def recommend_nearby_branch(
     return json.dumps(result, ensure_ascii=False)
 
 
-@tool
-def get_compliant_marketing_message(scenario: str = "branch_query") -> str:
-    """网点查询答复完成后调用，返回配置中已审核的营销话术和合规要求。只能原样使用message，不得自行添加具体车型库存紧张、价格、优惠或预订承诺。"""
+def get_compliant_marketing_message_data(
+    scenario: str = "branch_query",
+) -> dict[str, Any]:
+    """Return the configured marketing decision without tool serialization."""
 
     policy = load_marketing_policy()
     configured = policy.get("scenarios", {}).get(scenario)
     if not configured:
-        result = {
+        return {
             "status": "unsupported_scenario",
             "message": "",
             "should_speak": False,
         }
-    else:
-        should_speak = bool(configured.get("enabled")) and bool(
-            policy.get("peak_season")
-        )
-        result = {
-            "status": "ok",
-            "peak_season": bool(policy.get("peak_season")),
-            "should_speak": should_speak,
-            "message": configured.get("message", "") if should_speak else "",
-            "must_use_verbatim": bool(
-                policy.get("compliance", {}).get("must_use_verbatim")
-            ),
-            "compliance_rules": policy.get("compliance", {}).get("rules", []),
-        }
-    return json.dumps(result, ensure_ascii=False)
+    should_speak = bool(configured.get("enabled")) and bool(
+        policy.get("peak_season")
+    )
+    return {
+        "status": "ok",
+        "peak_season": bool(policy.get("peak_season")),
+        "should_speak": should_speak,
+        "message": configured.get("message", "") if should_speak else "",
+        "must_use_verbatim": bool(
+            policy.get("compliance", {}).get("must_use_verbatim")
+        ),
+        "compliance_rules": policy.get("compliance", {}).get("rules", []),
+    }
+
+
+@tool
+def get_compliant_marketing_message(scenario: str = "branch_query") -> str:
+    """网点查询答复完成后调用，返回配置中已审核的营销话术和合规要求。只能原样使用message，不得自行添加具体车型库存紧张、价格、优惠或预订承诺。"""
+
+    return json.dumps(
+        get_compliant_marketing_message_data(scenario), ensure_ascii=False
+    )
 
 
 @tool
