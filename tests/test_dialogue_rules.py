@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import re
 import unittest
 import uuid
 
@@ -69,21 +70,62 @@ def invoke(graph, text: str, thread_id: str | None = None):
 
 
 class DialogueRuleTests(unittest.TestCase):
-    def test_first_three_categories_and_eleven_rules_are_loaded(self):
+    def test_all_visible_workbook_marketing_rules_are_loaded(self):
         data = load_dialogue_rules()
-        self.assertEqual(len(data["categories"]), 3)
-        self.assertEqual(len(list(iter_rules())), 11)
+        self.assertEqual(len(data["categories"]), 4)
+        self.assertEqual(len(list(iter_rules())), 18)
+        self.assertEqual(data["source"]["sheet"], "营销话术")
+        self.assertEqual(data["source"]["range"], "A3:C20")
         self.assertTrue(all(len(rule["patterns"]) >= 3 for rule in iter_rules()))
+
+    def test_every_pattern_has_a_bounded_full_utterance_guard(self):
+        length_guard = re.compile(r"^\^\(\?=\.\{1,(\d+)\}\$\)")
+        for rule in iter_rules():
+            for pattern in rule["patterns"]:
+                with self.subTest(rule=rule["id"], pattern=pattern):
+                    match = length_guard.match(pattern)
+                    self.assertIsNotNone(match)
+                    self.assertLessEqual(int(match.group(1)), 80)
+                    self.assertTrue(pattern.endswith("$"))
+                    self.assertNotIn(".*", pattern)
+                    self.assertNotIn(".+", pattern)
 
     def test_regex_matches_each_category(self):
         samples = {
             "第一次租车，流程会不会很麻烦还要排队": "rental-process-concern",
             "异地还车费为什么这么贵": "one-way-return-fee-high",
             "跑长途车坏了有没有道路救援": "long-distance-breakdown",
+            "五一的价格怎么比平时高这么多": "holiday-price-increase",
         }
         for question, expected in samples.items():
             with self.subTest(question=question):
                 self.assertEqual(match_dialogue_rule(question)["id"], expected)
+
+    def test_every_configured_example_routes_to_its_own_rule(self):
+        for rule in iter_rules():
+            for example in rule.get("examples", []):
+                with self.subTest(rule=rule["id"], example=example):
+                    self.assertEqual(match_dialogue_rule(example)["id"], rule["id"])
+
+    def test_price_rules_do_not_entangle(self):
+        samples = {
+            "别家比你们便宜": "competitor-price-cheaper",
+            "新能源车怎么比油车还贵": "new-energy-price-higher",
+            "租车价格能不能便宜点": "request-lower-price-or-discount",
+            "这个价格我还是觉得有点高，能不能优惠一下啊": "price-high-needs-promotion",
+            "还车时会不会乱扣款": "holiday-price-accuracy-or-hidden-fees",
+            "我再想想": "price-hesitation",
+        }
+        for question, expected in samples.items():
+            with self.subTest(question=question):
+                self.assertEqual(match_dialogue_rule(question)["id"], expected)
+
+    def test_long_multi_intent_utterance_does_not_match_a_single_rule(self):
+        question = (
+            "我想查一下附近网点和电话，再看看有哪些车型，还想问异地还车费为什么高，"
+            "新能源车怎么比油车贵，最后确认取车和还车会不会额外收费或者乱扣款"
+        )
+        self.assertIsNone(match_dialogue_rule(question))
 
     def test_candidate_retrieval_never_exposes_answers(self):
         candidates = retrieve_rule_candidates("车在半路坏了怎么办", limit=3)

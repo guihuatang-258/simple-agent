@@ -12,6 +12,8 @@ from typing import Any
 
 
 _RULES_PATH = Path(__file__).resolve().parent / "data" / "dialogue_rules.json"
+_LENGTH_GUARD_RE = re.compile(r"^\^\(\?=\.\{1,(\d+)\}\$\)")
+_MAX_RULE_INPUT_CHARS = 80
 
 
 def normalize_text(text: str) -> str:
@@ -66,6 +68,17 @@ def load_dialogue_rules() -> dict[str, Any]:
         # 启动时提前发现非法正则，避免咨询过程中才触发配置错误。
         for pattern in patterns:
             re.compile(pattern, re.IGNORECASE)
+            guard = _LENGTH_GUARD_RE.match(pattern)
+            if not guard or not pattern.endswith("$"):
+                raise RuntimeError(
+                    f"话术规则 {rule_id} 的正则必须首尾锚定并声明总字数上限: "
+                    f"{pattern!r}"
+                )
+            if int(guard.group(1)) > _MAX_RULE_INPUT_CHARS:
+                raise RuntimeError(
+                    f"话术规则 {rule_id} 的正则总字数上限超过"
+                    f" {_MAX_RULE_INPUT_CHARS}: {pattern!r}"
+                )
     return data
 
 
@@ -87,7 +100,10 @@ def match_dialogue_rule(
         if exclude_rule_ids and rule["id"] in exclude_rule_ids:
             continue
         # 一条用户问题可配置多条正则，任意一条命中即可直接返回标准话术。
-        if any(re.search(pattern, normalized, re.IGNORECASE) for pattern in rule["patterns"]):
+        if any(
+            re.fullmatch(pattern, normalized, re.IGNORECASE)
+            for pattern in rule["patterns"]
+        ):
             return rule
     return None
 
