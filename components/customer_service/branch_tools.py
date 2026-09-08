@@ -17,6 +17,8 @@ from langchain.tools import tool
 _DATA_DIR = Path(__file__).resolve().parent / "data"
 _BRANCHES_PATH = _DATA_DIR / "branches.json"
 _MARKETING_PATH = _DATA_DIR / "marketing_policy.json"
+_DEFAULT_RESULT_LIMIT = 2
+_DEFAULT_MAX_DISTANCE_KM = 30.0
 _WEEKDAYS = (
     "monday",
     "tuesday",
@@ -44,6 +46,12 @@ def load_branch_catalog() -> dict[str, Any]:
     branches = catalog.get("branches")
     if not isinstance(branches, list) or not branches:
         raise RuntimeError("branches.json 必须包含至少一个网点。")
+    if int(catalog.get("result_limit", _DEFAULT_RESULT_LIMIT)) <= 0:
+        raise RuntimeError("result_limit 必须是正整数。")
+    if float(
+        catalog.get("max_return_distance_km", _DEFAULT_MAX_DISTANCE_KM)
+    ) <= 0:
+        raise RuntimeError("max_return_distance_km 必须是正数。")
     required = {
         "id",
         "name",
@@ -54,6 +62,8 @@ def load_branch_catalog() -> dict[str, Any]:
         "is_24_hours",
         "business_hours",
     }
+    seen_ids: set[str] = set()
+    seen_names: set[str] = set()
     for branch in branches:
         missing = required - set(branch)
         if missing:
@@ -61,6 +71,12 @@ def load_branch_catalog() -> dict[str, Any]:
                 f"网点 {branch.get('id', '<unknown>')} 缺少字段: "
                 + ", ".join(sorted(missing))
             )
+        if branch["id"] in seen_ids:
+            raise RuntimeError(f"网点ID重复: {branch['id']}")
+        if branch["name"] in seen_names:
+            raise RuntimeError(f"网点名称重复: {branch['name']}")
+        seen_ids.add(branch["id"])
+        seen_names.add(branch["name"])
     return catalog
 
 
@@ -96,7 +112,11 @@ def _intervals_for_date(branch: dict[str, Any], day: date) -> list[dict[str, str
     special = hours.get("special_hours", {})
     if day.isoformat() in special:
         return special[day.isoformat()] or []
-    return hours.get("weekly", {}).get(_WEEKDAYS[day.weekday()], [])
+    weekly = hours.get("weekly", {})
+    return weekly.get(
+        _WEEKDAYS[day.weekday()],
+        hours.get("daily", []),
+    )
 
 
 def _is_open(branch: dict[str, Any], at: datetime) -> bool:
@@ -145,13 +165,17 @@ def _distance_km(
 
 
 def _public_branch(branch: dict[str, Any], distance: float, is_open: bool) -> dict[str, Any]:
+    phones = branch.get("phones") or (
+        [branch["phone"]] if branch.get("phone") else []
+    )
     return {
         "id": branch["id"],
         "name": branch["name"],
         "short_address": branch["short_address"],
         "full_address": branch["full_address"],
-        "phone": branch.get("phone"),
-        "phone_status": "configured" if branch.get("phone") else "not_configured",
+        "phone": phones[0] if phones else None,
+        "phones": phones,
+        "phone_status": "configured" if phones else "not_configured",
         "business_hours": "24小时" if branch.get("is_24_hours") else _display_hours(branch),
         "is_24_hours": bool(branch.get("is_24_hours")),
         "is_open": is_open,
@@ -160,7 +184,13 @@ def _public_branch(branch: dict[str, Any], distance: float, is_open: bool) -> di
 
 
 def _display_hours(branch: dict[str, Any]) -> str:
-    weekly = branch["business_hours"].get("weekly", {})
+    hours = branch["business_hours"]
+    daily = hours.get("daily")
+    if daily is not None:
+        return ", ".join(
+            f"{item['open']}-{item['close']}" for item in daily
+        ) or "休息"
+    weekly = hours.get("weekly", {})
     schedules = list(weekly.values())
     if schedules and all(schedule == schedules[0] for schedule in schedules):
         intervals = schedules[0]
@@ -175,7 +205,7 @@ def recommend_nearby_branch_data(
     latitude: float,
     current_time: str = "",
 ) -> dict[str, Any]:
-    """Pure implementation used by the LangChain tool and unit tests."""
+    """Return at most the two nearest branches within the configured radius."""
 
     if not -180 <= longitude <= 180 or not -90 <= latitude <= 90:
         return {
@@ -183,7 +213,12 @@ def recommend_nearby_branch_data(
             "message": "经纬度超出有效范围，请重新解析用户地址。",
         }
 
-    branches = load_branch_catalog()["branches"]
+    catalog = load_branch_catalog()
+    branches = catalog["branches"]
+    result_limit = int(catalog.get("result_limit", _DEFAULT_RESULT_LIMIT))
+    max_distance_km = float(
+        catalog.get("max_return_distance_km", _DEFAULT_MAX_DISTANCE_KM)
+    )
     query_at = _query_datetime(current_time)
     ranked = []
     for branch in branches:
@@ -201,19 +236,39 @@ def recommend_nearby_branch_data(
             )
         )
     ranked.sort(key=lambda item: item[0])
+    nearby_ranked = [
+        item for item in ranked if item[0] <= max_distance_km
+    ][:result_limit]
 
-    nearest_distance, nearest_branch, nearest_open = ranked[0]
-    nearest = _public_branch(nearest_branch, nearest_distance, nearest_open)
+    nearby = [
+        _public_branch(branch, distance, is_open)
+        for distance, branch, is_open in nearby_ranked
+    ]
+    if not nearby:
+        return {
+            "status": "ok",
+            "query_time": query_at.isoformat(timespec="seconds"),
+            "message": f"{max_distance_km:g}公里内暂无可返回的网点。",
+            "recommendation_reason": "no_branch_within_radius",
+            "max_distance_km": max_distance_km,
+            "nearest_branch": None,
+            "recommended_branch": None,
+            "nearby_branches": [],
+            "all_candidates": [],
+        }
+
+    nearest_distance, nearest_branch, nearest_open = nearby_ranked[0]
+    nearest = nearby[0]
     recommendation = nearest if nearest_open else None
     reason = "nearest_open" if nearest_open else "no_open_branch"
 
     if not nearest_open:
         fallback_24h = next(
-            (item for item in ranked[1:] if item[1].get(
+            (item for item in nearby_ranked[1:] if item[1].get(
                 "is_24_hours") and item[2]),
             None,
         )
-        fallback_open = next((item for item in ranked[1:] if item[2]), None)
+        fallback_open = next((item for item in nearby_ranked[1:] if item[2]), None)
         selected = fallback_24h or fallback_open
         if selected:
             recommendation = _public_branch(
@@ -234,12 +289,11 @@ def recommend_nearby_branch_data(
         "query_time": query_at.isoformat(timespec="seconds"),
         "message": message,
         "recommendation_reason": reason,
+        "max_distance_km": max_distance_km,
         "nearest_branch": nearest,
         "recommended_branch": recommendation,
-        "all_candidates": [
-            _public_branch(branch, distance, is_open)
-            for distance, branch, is_open in ranked
-        ],
+        "nearby_branches": nearby,
+        "all_candidates": nearby,
     }
 
 

@@ -42,17 +42,26 @@ class FakeModel:
 
 
 class FakeAMapClient:
-    def __init__(self, *, level: str = "poi", relative: str = "finer"):
+    def __init__(
+        self,
+        *,
+        level: str = "poi",
+        relative: str = "finer",
+        longitude: float = 117.050646,
+        latitude: float = 39.050010,
+    ):
         self.calls: list[tuple[str, str]] = []
         self.level = level
         self.relative = relative
+        self.longitude = longitude
+        self.latitude = latitude
 
     async def resolve_location(self, address: str, city: str = ""):
         self.calls.append((address, city))
         return {
             "status": "ok",
-            "longitude": 117.050646,
-            "latitude": 39.050010,
+            "longitude": self.longitude,
+            "latitude": self.latitude,
             "classification": {
                 "level_code": self.level,
                 "relative_to_district": self.relative,
@@ -221,6 +230,9 @@ class CustomerServiceGraphTests(unittest.TestCase):
         final = result["messages"][-1]
         self.assertEqual(final.additional_kwargs["response_source"], "branch_workflow")
         self.assertIn("天津南站服务点", final.content)
+        self.assertIn("潮向城自助点", final.content)
+        self.assertIn("1. 天津南站服务点", final.content)
+        self.assertIn("2. 潮向城自助点", final.content)
         self.assertEqual(model.calls, 1)
 
     def test_branch_query_requests_detail_for_coarse_location(self):
@@ -242,6 +254,23 @@ class CustomerServiceGraphTests(unittest.TestCase):
             "branch_address_refinement",
         )
         self.assertIn("位置范围较大", final.content)
+
+    def test_branch_query_does_not_return_locations_beyond_thirty_kilometers(self):
+        amap_client = FakeAMapClient(longitude=116.4074, latitude=39.9042)
+        model = FakeModel(
+            [
+                '{"intent":"branch_query","address":"北京市中心",'
+                '"handoff_decision":"unknown"}',
+            ]
+        )
+        graph = build_agent(model=model, amap_client=amap_client)
+
+        result = invoke(graph, "北京市中心附近有天津的网点吗")
+        final = result["messages"][-1]
+
+        self.assertEqual(result["pending_intent"], "handoff_confirmation")
+        self.assertIn("30公里内暂无可返回的网点", final.content)
+        self.assertNotIn("天津南站服务点", final.content)
 
 
 if __name__ == "__main__":

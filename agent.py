@@ -351,29 +351,27 @@ def _city_hint(address: str) -> str | None:
 
 
 def _branch_response(result: dict[str, Any]) -> tuple[str, str | None]:
-    nearest = result["nearest_branch"]
-    recommended = result.get("recommended_branch")
-    lines: list[str] = []
-    if not nearest["is_open"]:
-        lines.append(
-            f"距您最近的{nearest['name']}当前未营业，营业时间为{nearest['business_hours']}。"
-        )
-    if recommended:
-        status = "当前营业" if recommended["is_open"] else "当前未营业"
-        lines.extend(
-            [
-                f"为您推荐：{recommended['name']}（距您约{recommended['distance_km']:.2f}公里）",
-                f"地址：{recommended['short_address']}",
-                f"联系电话：{recommended['phone'] or '暂未配置'}",
-                f"营业时间：{recommended['business_hours']}，{status}",
-            ]
-        )
+    nearby = result.get("nearby_branches", [])
+    if nearby:
+        radius = result.get("max_distance_km", 30)
+        lines = [f"为您找到{radius:g}公里内最近的{len(nearby)}个网点："]
+        for index, branch in enumerate(nearby, start=1):
+            status = "当前营业" if branch["is_open"] else "当前未营业"
+            phones = "、".join(branch.get("phones") or []) or "暂未配置"
+            lines.extend(
+                [
+                    f"{index}. {branch['name']}（距您约{branch['distance_km']:.2f}公里）",
+                    f"地址：{branch['short_address']}",
+                    f"联系电话：{phones}",
+                    f"营业时间：{branch['business_hours']}，{status}",
+                ]
+            )
         marketing = get_compliant_marketing_message_data("branch_query")
         if marketing.get("should_speak") and marketing.get("message"):
             lines.extend(["", marketing["message"]])
         return "\n".join(lines), None
 
-    lines.extend([result["message"], "需要我为您转接人工客服吗？"])
+    lines = [result["message"], "需要我为您转接人工客服吗？"]
     return "\n".join(lines), "handoff_confirmation"
 
 

@@ -1,52 +1,1743 @@
 {
-  "version": 1,
+  "version": 2,
+  "source": {
+    "workbook": "天津网点.xlsx",
+    "sheet": "Sheet1",
+    "range": "A2:D66",
+    "source_rows": 65,
+    "unique_branches": 64
+  },
   "coordinate_system": "GCJ-02",
+  "max_return_distance_km": 30,
+  "result_limit": 2,
   "branches": [
-    {
-      "id": "tianjin-south-station",
-      "name": "天津南站服务点",
-      "full_address": "天津市西青区张家窝镇瑞雪路8号7号楼101商铺",
-      "short_address": "西青区张家窝镇瑞雪路8号7号楼101商铺",
-      "phone": null,
-      "longitude": 117.055065,
-      "latitude": 39.053851,
-      "coordinate_accuracy": "高德道路级近似坐标，POC阶段使用",
-      "is_24_hours": false,
-      "business_hours": {
-        "timezone": "Asia/Shanghai",
-        "weekly": {
-          "monday": [{"open": "08:00", "close": "21:00"}],
-          "tuesday": [{"open": "08:00", "close": "21:00"}],
-          "wednesday": [{"open": "08:00", "close": "21:00"}],
-          "thursday": [{"open": "08:00", "close": "21:00"}],
-          "friday": [{"open": "08:00", "close": "21:00"}],
-          "saturday": [{"open": "08:00", "close": "21:00"}],
-          "sunday": [{"open": "08:00", "close": "21:00"}]
-        },
-        "special_hours": {}
-      }
-    },
     {
       "id": "jinghai-sports-university-self-service",
       "name": "静海体育学院自助点",
       "full_address": "天津市静海区北华北路与东海道交口西侧尚客优精选酒店前停车场",
       "short_address": "静海区北华北路与东海道交口西侧尚客优精选酒店前停车场",
-      "phone": null,
+      "phone": "17822068818",
+      "phones": [
+        "17822068818"
+      ],
       "longitude": 117.063901,
       "latitude": 38.959319,
-      "coordinate_accuracy": "高德道路交叉口级近似坐标，POC阶段使用",
+      "coordinate_accuracy": "高德GCJ-02坐标",
+      "source_rows": [
+        2
+      ],
       "is_24_hours": false,
       "business_hours": {
         "timezone": "Asia/Shanghai",
-        "weekly": {
-          "monday": [{"open": "09:00", "close": "21:00"}],
-          "tuesday": [{"open": "09:00", "close": "21:00"}],
-          "wednesday": [{"open": "09:00", "close": "21:00"}],
-          "thursday": [{"open": "09:00", "close": "21:00"}],
-          "friday": [{"open": "09:00", "close": "21:00"}],
-          "saturday": [{"open": "09:00", "close": "21:00"}],
-          "sunday": [{"open": "09:00", "close": "21:00"}]
-        },
+        "daily": [
+          {
+            "open": "09:00",
+            "close": "21:00"
+          }
+        ],
+        "special_hours": {}
+      }
+    },
+    {
+      "id": "tianjin-branch-002",
+      "name": "西青中际佳悦酒店自助点",
+      "full_address": "天津市西青区新科道与碧详路交口路西中际佳悦酒店停车场院内",
+      "short_address": "西青区新科道与碧详路交口路西中际佳悦酒店停车场院内",
+      "phone": "17822068818",
+      "phones": [
+        "17822068818"
+      ],
+      "longitude": 117.093913,
+      "latitude": 39.10514,
+      "coordinate_accuracy": "高德GCJ-02坐标",
+      "source_rows": [
+        3
+      ],
+      "is_24_hours": false,
+      "business_hours": {
+        "timezone": "Asia/Shanghai",
+        "daily": [
+          {
+            "open": "08:00",
+            "close": "21:00"
+          }
+        ],
+        "special_hours": {}
+      }
+    },
+    {
+      "id": "tianjin-south-station",
+      "name": "天津南站服务点",
+      "full_address": "天津市西青区张家窝镇瑞雪路8号7号楼101商铺",
+      "short_address": "西青区张家窝镇瑞雪路8号7号楼101商铺",
+      "phone": "17822068818",
+      "phones": [
+        "17822068818",
+        "17822601703"
+      ],
+      "longitude": 117.055065,
+      "latitude": 39.053851,
+      "coordinate_accuracy": "高德GCJ-02坐标",
+      "source_rows": [
+        4,
+        11
+      ],
+      "is_24_hours": false,
+      "business_hours": {
+        "timezone": "Asia/Shanghai",
+        "daily": [
+          {
+            "open": "08:00",
+            "close": "21:00"
+          }
+        ],
+        "special_hours": {}
+      }
+    },
+    {
+      "id": "tianjin-branch-004",
+      "name": "潮向城自助点",
+      "full_address": "天津市西青区张家窝镇潮向城广场旁康定路路边停车位",
+      "short_address": "西青区张家窝镇潮向城广场旁康定路路边停车位",
+      "phone": "17822068818",
+      "phones": [
+        "17822068818"
+      ],
+      "longitude": 117.043167,
+      "latitude": 39.063686,
+      "coordinate_accuracy": "高德GCJ-02坐标",
+      "source_rows": [
+        5
+      ],
+      "is_24_hours": false,
+      "business_hours": {
+        "timezone": "Asia/Shanghai",
+        "daily": [
+          {
+            "open": "08:00",
+            "close": "21:00"
+          }
+        ],
+        "special_hours": {}
+      }
+    },
+    {
+      "id": "tianjin-branch-005",
+      "name": "一中心地铁站自助点",
+      "full_address": "天津市南开区红旗路一中心地铁D口",
+      "short_address": "南开区红旗路一中心地铁D口",
+      "phone": "17822068818",
+      "phones": [
+        "17822068818"
+      ],
+      "longitude": 117.149075,
+      "latitude": 39.133934,
+      "coordinate_accuracy": "高德GCJ-02坐标",
+      "source_rows": [
+        6
+      ],
+      "is_24_hours": false,
+      "business_hours": {
+        "timezone": "Asia/Shanghai",
+        "daily": [
+          {
+            "open": "08:00",
+            "close": "21:00"
+          }
+        ],
+        "special_hours": {}
+      }
+    },
+    {
+      "id": "tianjin-branch-006",
+      "name": "静海丽柏酒店自助点",
+      "full_address": "天津市静海区津文路与瑞和道交口东侧丽柏酒店前停车场",
+      "short_address": "静海区津文路与瑞和道交口东侧丽柏酒店前停车场",
+      "phone": "17822601702",
+      "phones": [
+        "17822601702"
+      ],
+      "longitude": 116.959472,
+      "latitude": 38.941459,
+      "coordinate_accuracy": "高德GCJ-02坐标",
+      "source_rows": [
+        7
+      ],
+      "is_24_hours": false,
+      "business_hours": {
+        "timezone": "Asia/Shanghai",
+        "daily": [
+          {
+            "open": "09:00",
+            "close": "21:00"
+          }
+        ],
+        "special_hours": {}
+      }
+    },
+    {
+      "id": "tianjin-branch-007",
+      "name": "西湖道缤纷购物广场自助点",
+      "full_address": "天津市南开区西湖道78号缤纷购物广场地库停车场",
+      "short_address": "南开区西湖道78号缤纷购物广场地库停车场",
+      "phone": "17822601702",
+      "phones": [
+        "17822601702"
+      ],
+      "longitude": 117.152539,
+      "latitude": 39.121321,
+      "coordinate_accuracy": "高德GCJ-02坐标",
+      "source_rows": [
+        8
+      ],
+      "is_24_hours": false,
+      "business_hours": {
+        "timezone": "Asia/Shanghai",
+        "daily": [
+          {
+            "open": "09:00",
+            "close": "21:00"
+          }
+        ],
+        "special_hours": {}
+      }
+    },
+    {
+      "id": "tianjin-branch-008",
+      "name": "西青大学城自助点",
+      "full_address": "天津市西青区3号线大学城站A出口旁停车场",
+      "short_address": "西青区3号线大学城站A出口旁停车场",
+      "phone": "17822601702",
+      "phones": [
+        "17822601702"
+      ],
+      "longitude": 117.112084,
+      "latitude": 39.058457,
+      "coordinate_accuracy": "高德GCJ-02坐标",
+      "source_rows": [
+        9
+      ],
+      "is_24_hours": false,
+      "business_hours": {
+        "timezone": "Asia/Shanghai",
+        "daily": [
+          {
+            "open": "09:00",
+            "close": "21:00"
+          }
+        ],
+        "special_hours": {}
+      }
+    },
+    {
+      "id": "tianjin-branch-009",
+      "name": "中北镇节能大厦自助点",
+      "full_address": "天津市西青区中北镇星光路80号星光综合体院内停车场",
+      "short_address": "西青区中北镇星光路80号星光综合体院内停车场",
+      "phone": "17822601703",
+      "phones": [
+        "17822601703"
+      ],
+      "longitude": 117.076039,
+      "latitude": 39.125451,
+      "coordinate_accuracy": "高德GCJ-02坐标",
+      "source_rows": [
+        10
+      ],
+      "is_24_hours": true,
+      "business_hours": {
+        "timezone": "Asia/Shanghai",
+        "daily": [
+          {
+            "open": "00:00",
+            "close": "00:00"
+          }
+        ],
+        "special_hours": {}
+      }
+    },
+    {
+      "id": "tianjin-branch-010",
+      "name": "武清瑞丰广场自助点",
+      "full_address": "天津市武清区光明道534号瑞丰广场停车场内",
+      "short_address": "武清区光明道534号瑞丰广场停车场内",
+      "phone": "17822068809",
+      "phones": [
+        "17822068809"
+      ],
+      "longitude": 117.060091,
+      "latitude": 39.386333,
+      "coordinate_accuracy": "高德GCJ-02坐标",
+      "source_rows": [
+        12
+      ],
+      "is_24_hours": true,
+      "business_hours": {
+        "timezone": "Asia/Shanghai",
+        "daily": [
+          {
+            "open": "00:00",
+            "close": "00:00"
+          }
+        ],
+        "special_hours": {}
+      }
+    },
+    {
+      "id": "tianjin-branch-011",
+      "name": "红桥麦德龙自助点",
+      "full_address": "天津市红桥区西青道75号麦德龙商场内地面停车场",
+      "short_address": "红桥区西青道75号麦德龙商场内地面停车场",
+      "phone": "17822068819",
+      "phones": [
+        "17822068819"
+      ],
+      "longitude": 117.15377,
+      "latitude": 39.154281,
+      "coordinate_accuracy": "高德GCJ-02坐标",
+      "source_rows": [
+        13
+      ],
+      "is_24_hours": false,
+      "business_hours": {
+        "timezone": "Asia/Shanghai",
+        "daily": [
+          {
+            "open": "09:00",
+            "close": "21:00"
+          }
+        ],
+        "special_hours": {}
+      }
+    },
+    {
+      "id": "tianjin-branch-012",
+      "name": "双街柴楼自助点",
+      "full_address": "天津市北辰区柴楼庄园北道友鹏婚礼堂院内停车场",
+      "short_address": "北辰区柴楼庄园北道友鹏婚礼堂院内停车场",
+      "phone": "17822068809",
+      "phones": [
+        "17822068809"
+      ],
+      "longitude": 117.107176,
+      "latitude": 39.271009,
+      "coordinate_accuracy": "高德GCJ-02坐标",
+      "source_rows": [
+        14
+      ],
+      "is_24_hours": false,
+      "business_hours": {
+        "timezone": "Asia/Shanghai",
+        "daily": [
+          {
+            "open": "09:00",
+            "close": "21:00"
+          }
+        ],
+        "special_hours": {}
+      }
+    },
+    {
+      "id": "tianjin-branch-013",
+      "name": "武清东方之珠自助点",
+      "full_address": "天津市武清区三号道与京津公路交叉口东方之珠停车场",
+      "short_address": "武清区三号道与京津公路交叉口东方之珠停车场",
+      "phone": "17822068819",
+      "phones": [
+        "17822068819"
+      ],
+      "longitude": 117.071226,
+      "latitude": 39.368577,
+      "coordinate_accuracy": "高德GCJ-02坐标",
+      "source_rows": [
+        15
+      ],
+      "is_24_hours": false,
+      "business_hours": {
+        "timezone": "Asia/Shanghai",
+        "daily": [
+          {
+            "open": "09:00",
+            "close": "21:00"
+          }
+        ],
+        "special_hours": {}
+      }
+    },
+    {
+      "id": "tianjin-branch-014",
+      "name": "天士力姚江东路自助点",
+      "full_address": "天津市北辰区姚江东路人人喜乐超市后院停车场",
+      "short_address": "北辰区姚江东路人人喜乐超市后院停车场",
+      "phone": "17822068819",
+      "phones": [
+        "17822068819"
+      ],
+      "longitude": 117.192694,
+      "latitude": 39.212788,
+      "coordinate_accuracy": "高德GCJ-02坐标",
+      "source_rows": [
+        16
+      ],
+      "is_24_hours": false,
+      "business_hours": {
+        "timezone": "Asia/Shanghai",
+        "daily": [
+          {
+            "open": "09:00",
+            "close": "19:00"
+          }
+        ],
+        "special_hours": {}
+      }
+    },
+    {
+      "id": "tianjin-branch-015",
+      "name": "北宁湾自助点",
+      "full_address": "天津市河北区地铁3号线铁东路站A出口旁宁宇家园地面停车场",
+      "short_address": "河北区地铁3号线铁东路站A出口旁宁宇家园地面停车场",
+      "phone": "17822068819",
+      "phones": [
+        "17822068819"
+      ],
+      "longitude": 117.208108,
+      "latitude": 39.181281,
+      "coordinate_accuracy": "高德GCJ-02坐标",
+      "source_rows": [
+        17
+      ],
+      "is_24_hours": false,
+      "business_hours": {
+        "timezone": "Asia/Shanghai",
+        "daily": [
+          {
+            "open": "09:00",
+            "close": "21:00"
+          }
+        ],
+        "special_hours": {}
+      }
+    },
+    {
+      "id": "tianjin-branch-016",
+      "name": "水木天成物美超市自助点",
+      "full_address": "天津市红桥区咸阳北路12号物美超市停车场",
+      "short_address": "红桥区咸阳北路12号物美超市停车场",
+      "phone": "17822068809",
+      "phones": [
+        "17822068809"
+      ],
+      "longitude": 117.134496,
+      "latitude": 39.162163,
+      "coordinate_accuracy": "高德GCJ-02坐标",
+      "source_rows": [
+        18
+      ],
+      "is_24_hours": false,
+      "business_hours": {
+        "timezone": "Asia/Shanghai",
+        "daily": [
+          {
+            "open": "08:00",
+            "close": "21:00"
+          }
+        ],
+        "special_hours": {}
+      }
+    },
+    {
+      "id": "tianjin-branch-017",
+      "name": "丁字沽物美超市自助点",
+      "full_address": "天津市红桥区丁字沽三号路物美超市门前停车场",
+      "short_address": "红桥区丁字沽三号路物美超市门前停车场",
+      "phone": "17822068816",
+      "phones": [
+        "17822068816"
+      ],
+      "longitude": 117.150578,
+      "latitude": 39.179943,
+      "coordinate_accuracy": "高德GCJ-02坐标",
+      "source_rows": [
+        19
+      ],
+      "is_24_hours": false,
+      "business_hours": {
+        "timezone": "Asia/Shanghai",
+        "daily": [
+          {
+            "open": "09:00",
+            "close": "19:00"
+          }
+        ],
+        "special_hours": {}
+      }
+    },
+    {
+      "id": "tianjin-branch-018",
+      "name": "武清高铁站服务点",
+      "full_address": "天津市武清区前进道辅路荔城公馆5号楼底商",
+      "short_address": "武清区前进道辅路荔城公馆5号楼底商",
+      "phone": "17822068816",
+      "phones": [
+        "17822068816"
+      ],
+      "longitude": 117.025055,
+      "latitude": 39.371232,
+      "coordinate_accuracy": "高德GCJ-02坐标",
+      "source_rows": [
+        20
+      ],
+      "is_24_hours": false,
+      "business_hours": {
+        "timezone": "Asia/Shanghai",
+        "daily": [
+          {
+            "open": "08:00",
+            "close": "21:00"
+          }
+        ],
+        "special_hours": {}
+      }
+    },
+    {
+      "id": "tianjin-branch-019",
+      "name": "金狮桥华润万家自助点",
+      "full_address": "天津市河北区万柳村大街与金钟河大街交口华润万家超市停车场入口直行50米室内停车场",
+      "short_address": "河北区万柳村大街与金钟河大街交口华润万家超市停车场入口直行50米室内停车场",
+      "phone": "17822068806",
+      "phones": [
+        "17822068806"
+      ],
+      "longitude": 117.217645,
+      "latitude": 39.156084,
+      "coordinate_accuracy": "高德GCJ-02坐标",
+      "source_rows": [
+        21
+      ],
+      "is_24_hours": true,
+      "business_hours": {
+        "timezone": "Asia/Shanghai",
+        "daily": [
+          {
+            "open": "00:00",
+            "close": "00:00"
+          }
+        ],
+        "special_hours": {}
+      }
+    },
+    {
+      "id": "tianjin-branch-020",
+      "name": "天津西站服务点",
+      "full_address": "天津市红桥区西站南出口南地下停车场负二层C区",
+      "short_address": "红桥区西站南出口南地下停车场负二层C区",
+      "phone": "17822068816",
+      "phones": [
+        "17822068816"
+      ],
+      "longitude": 117.158907,
+      "latitude": 39.156163,
+      "coordinate_accuracy": "高德GCJ-02坐标",
+      "source_rows": [
+        22
+      ],
+      "is_24_hours": false,
+      "business_hours": {
+        "timezone": "Asia/Shanghai",
+        "daily": [
+          {
+            "open": "08:00",
+            "close": "23:00"
+          }
+        ],
+        "special_hours": {}
+      }
+    },
+    {
+      "id": "tianjin-branch-021",
+      "name": "武清万达广场自助点",
+      "full_address": "天津市武清区福源道晨曦写字楼停车场",
+      "short_address": "武清区福源道晨曦写字楼停车场",
+      "phone": "17822068806",
+      "phones": [
+        "17822068806"
+      ],
+      "longitude": 117.05438,
+      "latitude": 39.406597,
+      "coordinate_accuracy": "高德GCJ-02坐标",
+      "source_rows": [
+        23
+      ],
+      "is_24_hours": false,
+      "business_hours": {
+        "timezone": "Asia/Shanghai",
+        "daily": [
+          {
+            "open": "09:00",
+            "close": "21:00"
+          }
+        ],
+        "special_hours": {}
+      }
+    },
+    {
+      "id": "tianjin-branch-022",
+      "name": "财经大学自助点",
+      "full_address": "天津市河西区珠江道财经大学地铁站A口",
+      "short_address": "河西区珠江道财经大学地铁站A口",
+      "phone": "17822068816",
+      "phones": [
+        "17822068816"
+      ],
+      "longitude": 117.277966,
+      "latitude": 39.064222,
+      "coordinate_accuracy": "高德GCJ-02坐标",
+      "source_rows": [
+        24
+      ],
+      "is_24_hours": false,
+      "business_hours": {
+        "timezone": "Asia/Shanghai",
+        "daily": [
+          {
+            "open": "08:00",
+            "close": "21:00"
+          }
+        ],
+        "special_hours": {}
+      }
+    },
+    {
+      "id": "tianjin-branch-023",
+      "name": "梅江皇冠酒店自助点",
+      "full_address": "天津市河西区环岛西路与上岛路交口东南方向100米",
+      "short_address": "河西区环岛西路与上岛路交口东南方向100米",
+      "phone": "17822068806",
+      "phones": [
+        "17822068806"
+      ],
+      "longitude": 117.218707,
+      "latitude": 39.042937,
+      "coordinate_accuracy": "高德GCJ-02坐标",
+      "source_rows": [
+        25
+      ],
+      "is_24_hours": false,
+      "business_hours": {
+        "timezone": "Asia/Shanghai",
+        "daily": [
+          {
+            "open": "09:00",
+            "close": "21:00"
+          }
+        ],
+        "special_hours": {}
+      }
+    },
+    {
+      "id": "tianjin-branch-024",
+      "name": "河西土城地铁站服务点",
+      "full_address": "天津市河西区泰山路1号全季酒店底商",
+      "short_address": "河西区泰山路1号全季酒店底商",
+      "phone": "17822068815",
+      "phones": [
+        "17822068815"
+      ],
+      "longitude": 117.250545,
+      "latitude": 39.068468,
+      "coordinate_accuracy": "高德GCJ-02坐标",
+      "source_rows": [
+        26
+      ],
+      "is_24_hours": false,
+      "business_hours": {
+        "timezone": "Asia/Shanghai",
+        "daily": [
+          {
+            "open": "08:00",
+            "close": "21:00"
+          }
+        ],
+        "special_hours": {}
+      }
+    },
+    {
+      "id": "tianjin-branch-025",
+      "name": "华苑人人乐自助点",
+      "full_address": "天津市南开区迎水道与梅苑路交口人人乐超市停车场",
+      "short_address": "南开区迎水道与梅苑路交口人人乐超市停车场",
+      "phone": "17822068815",
+      "phones": [
+        "17822068815"
+      ],
+      "longitude": 117.131717,
+      "latitude": 39.088877,
+      "coordinate_accuracy": "高德GCJ-02坐标",
+      "source_rows": [
+        27
+      ],
+      "is_24_hours": false,
+      "business_hours": {
+        "timezone": "Asia/Shanghai",
+        "daily": [
+          {
+            "open": "08:00",
+            "close": "21:00"
+          }
+        ],
+        "special_hours": {}
+      }
+    },
+    {
+      "id": "tianjin-branch-026",
+      "name": "津塘路地铁站自助点",
+      "full_address": "天津市河东区津塘路地铁站B口",
+      "short_address": "河东区津塘路地铁站B口",
+      "phone": "17822601703",
+      "phones": [
+        "17822601703"
+      ],
+      "longitude": 117.24204,
+      "latitude": 39.116289,
+      "coordinate_accuracy": "高德GCJ-02坐标",
+      "source_rows": [
+        28
+      ],
+      "is_24_hours": false,
+      "business_hours": {
+        "timezone": "Asia/Shanghai",
+        "daily": [
+          {
+            "open": "08:00",
+            "close": "21:00"
+          }
+        ],
+        "special_hours": {}
+      }
+    },
+    {
+      "id": "tianjin-branch-027",
+      "name": "天津体育中心服务点",
+      "full_address": "天津市南开区宾水西道农垦博纳影城停车场",
+      "short_address": "南开区宾水西道农垦博纳影城停车场",
+      "phone": "17822068815",
+      "phones": [
+        "17822068815"
+      ],
+      "longitude": 117.180496,
+      "latitude": 39.078488,
+      "coordinate_accuracy": "高德GCJ-02坐标",
+      "source_rows": [
+        29
+      ],
+      "is_24_hours": false,
+      "business_hours": {
+        "timezone": "Asia/Shanghai",
+        "daily": [
+          {
+            "open": "08:00",
+            "close": "21:00"
+          }
+        ],
+        "special_hours": {}
+      }
+    },
+    {
+      "id": "tianjin-branch-028",
+      "name": "河东新广路月光园自助点",
+      "full_address": "天津市河东区华碧道与新广路交叉口东20米，天津威畅停车场内",
+      "short_address": "河东区华碧道与新广路交叉口东20米，天津威畅停车场内",
+      "phone": "17822636996",
+      "phones": [
+        "17822636996"
+      ],
+      "longitude": 117.209209,
+      "latitude": 39.140972,
+      "coordinate_accuracy": "高德GCJ-02坐标",
+      "source_rows": [
+        30
+      ],
+      "is_24_hours": false,
+      "business_hours": {
+        "timezone": "Asia/Shanghai",
+        "daily": [
+          {
+            "open": "09:00",
+            "close": "19:00"
+          }
+        ],
+        "special_hours": {}
+      }
+    },
+    {
+      "id": "tianjin-branch-029",
+      "name": "海河东路香格里拉酒店自助点",
+      "full_address": "天津市河东区海河东路328号",
+      "short_address": "河东区海河东路328号",
+      "phone": "17822636996",
+      "phones": [
+        "17822636996"
+      ],
+      "longitude": 117.216124,
+      "latitude": 39.125546,
+      "coordinate_accuracy": "高德GCJ-02坐标",
+      "source_rows": [
+        31
+      ],
+      "is_24_hours": false,
+      "business_hours": {
+        "timezone": "Asia/Shanghai",
+        "daily": [
+          {
+            "open": "09:00",
+            "close": "19:00"
+          }
+        ],
+        "special_hours": {}
+      }
+    },
+    {
+      "id": "tianjin-branch-030",
+      "name": "顺驰桥自助点",
+      "full_address": "天津市河东区中环线红星路116号",
+      "short_address": "河东区中环线红星路116号",
+      "phone": "17822068815",
+      "phones": [
+        "17822068815"
+      ],
+      "longitude": 117.234577,
+      "latitude": 39.145328,
+      "coordinate_accuracy": "高德GCJ-02坐标",
+      "source_rows": [
+        32
+      ],
+      "is_24_hours": true,
+      "business_hours": {
+        "timezone": "Asia/Shanghai",
+        "daily": [
+          {
+            "open": "00:00",
+            "close": "00:00"
+          }
+        ],
+        "special_hours": {}
+      }
+    },
+    {
+      "id": "tianjin-branch-031",
+      "name": "营口道自助点",
+      "full_address": "天津市和平区营口道与贵阳路交叉口东70米停车场院内（和平区垃圾分类主题公园对面）",
+      "short_address": "和平区营口道与贵阳路交叉口东70米停车场院内（和平区垃圾分类主题公园对面）",
+      "phone": "17822068815",
+      "phones": [
+        "17822068815"
+      ],
+      "longitude": 117.191565,
+      "latitude": 39.114762,
+      "coordinate_accuracy": "高德GCJ-02坐标",
+      "source_rows": [
+        33
+      ],
+      "is_24_hours": true,
+      "business_hours": {
+        "timezone": "Asia/Shanghai",
+        "daily": [
+          {
+            "open": "00:00",
+            "close": "00:00"
+          }
+        ],
+        "special_hours": {}
+      }
+    },
+    {
+      "id": "tianjin-branch-032",
+      "name": "西南角地铁站自助点",
+      "full_address": "天津市南开区城厢西路晋丰大厦西门路两侧停车位",
+      "short_address": "南开区城厢西路晋丰大厦西门路两侧停车位",
+      "phone": "17822068815",
+      "phones": [
+        "17822068815"
+      ],
+      "longitude": 117.176961,
+      "latitude": 39.138143,
+      "coordinate_accuracy": "高德GCJ-02坐标",
+      "source_rows": [
+        34
+      ],
+      "is_24_hours": false,
+      "business_hours": {
+        "timezone": "Asia/Shanghai",
+        "daily": [
+          {
+            "open": "09:00",
+            "close": "21:00"
+          }
+        ],
+        "special_hours": {}
+      }
+    },
+    {
+      "id": "tianjin-branch-033",
+      "name": "古文化街自助点",
+      "full_address": "天津市南开区东门内大街右侧停车位",
+      "short_address": "南开区东门内大街右侧停车位",
+      "phone": "17822068812",
+      "phones": [
+        "17822068812"
+      ],
+      "longitude": 117.190318,
+      "latitude": 39.141341,
+      "coordinate_accuracy": "高德GCJ-02坐标",
+      "source_rows": [
+        35
+      ],
+      "is_24_hours": false,
+      "business_hours": {
+        "timezone": "Asia/Shanghai",
+        "daily": [
+          {
+            "open": "09:00",
+            "close": "21:00"
+          }
+        ],
+        "special_hours": {}
+      }
+    },
+    {
+      "id": "tianjin-branch-034",
+      "name": "天津站服务点",
+      "full_address": "天津市河东区天津站南广场地下二层C区",
+      "short_address": "河东区天津站南广场地下二层C区",
+      "phone": "17822636996",
+      "phones": [
+        "17822636996"
+      ],
+      "longitude": 117.209923,
+      "latitude": 39.138123,
+      "coordinate_accuracy": "高德GCJ-02坐标",
+      "source_rows": [
+        36
+      ],
+      "is_24_hours": false,
+      "business_hours": {
+        "timezone": "Asia/Shanghai",
+        "daily": [
+          {
+            "open": "08:00",
+            "close": "23:00"
+          }
+        ],
+        "special_hours": {}
+      }
+    },
+    {
+      "id": "tianjin-branch-035",
+      "name": "一经路自助点",
+      "full_address": "天津市东丽区东丽开发区一经路丽东苑停车场",
+      "short_address": "东丽区东丽开发区一经路丽东苑停车场",
+      "phone": "17822068812",
+      "phones": [
+        "17822068812"
+      ],
+      "longitude": 117.35237,
+      "latitude": 39.078989,
+      "coordinate_accuracy": "高德GCJ-02坐标",
+      "source_rows": [
+        37
+      ],
+      "is_24_hours": false,
+      "business_hours": {
+        "timezone": "Asia/Shanghai",
+        "daily": [
+          {
+            "open": "09:00",
+            "close": "19:00"
+          }
+        ],
+        "special_hours": {}
+      }
+    },
+    {
+      "id": "tianjin-branch-036",
+      "name": "空港商务园西区服务点",
+      "full_address": "天津市东丽区中环西路与西二道交口自贸区格兰大酒店马路对面神州租车停车场",
+      "short_address": "东丽区中环西路与西二道交口自贸区格兰大酒店马路对面神州租车停车场",
+      "phone": "17822068812",
+      "phones": [
+        "17822068812"
+      ],
+      "longitude": 117.383375,
+      "latitude": 39.155425,
+      "coordinate_accuracy": "高德GCJ-02坐标",
+      "source_rows": [
+        38
+      ],
+      "is_24_hours": true,
+      "business_hours": {
+        "timezone": "Asia/Shanghai",
+        "daily": [
+          {
+            "open": "00:00",
+            "close": "00:00"
+          }
+        ],
+        "special_hours": {}
+      }
+    },
+    {
+      "id": "tianjin-branch-037",
+      "name": "军粮城地铁站自助点",
+      "full_address": "天津市东丽区津塘公路军粮城轻轨站南侧（军粮城地铁站A出口步行200米）广福商业中心车场",
+      "short_address": "东丽区津塘公路军粮城轻轨站南侧（军粮城地铁站A出口步行200米）广福商业中心车场",
+      "phone": "17822068812",
+      "phones": [
+        "17822068812"
+      ],
+      "longitude": 117.455823,
+      "latitude": 39.048565,
+      "coordinate_accuracy": "高德GCJ-02坐标",
+      "source_rows": [
+        39
+      ],
+      "is_24_hours": false,
+      "business_hours": {
+        "timezone": "Asia/Shanghai",
+        "daily": [
+          {
+            "open": "09:00",
+            "close": "21:00"
+          }
+        ],
+        "special_hours": {}
+      }
+    },
+    {
+      "id": "tianjin-branch-038",
+      "name": "津滨大道全季酒店自助点",
+      "full_address": "天津市东丽区登州南路与海莲路交口融创成6号楼旁",
+      "short_address": "东丽区登州南路与海莲路交口融创成6号楼旁",
+      "phone": "17822066617",
+      "phones": [
+        "17822066617"
+      ],
+      "longitude": 117.306334,
+      "latitude": 39.115786,
+      "coordinate_accuracy": "高德GCJ-02坐标",
+      "source_rows": [
+        40
+      ],
+      "is_24_hours": false,
+      "business_hours": {
+        "timezone": "Asia/Shanghai",
+        "daily": [
+          {
+            "open": "09:00",
+            "close": "21:00"
+          }
+        ],
+        "special_hours": {}
+      }
+    },
+    {
+      "id": "tianjin-branch-039",
+      "name": "华明镇建邦时代汇自助点",
+      "full_address": "天津市东丽区华明镇建邦时代汇广场麦当劳门前停车场",
+      "short_address": "东丽区华明镇建邦时代汇广场麦当劳门前停车场",
+      "phone": "17822066617",
+      "phones": [
+        "17822066617"
+      ],
+      "longitude": 117.383497,
+      "latitude": 39.168517,
+      "coordinate_accuracy": "高德GCJ-02坐标",
+      "source_rows": [
+        41
+      ],
+      "is_24_hours": false,
+      "business_hours": {
+        "timezone": "Asia/Shanghai",
+        "daily": [
+          {
+            "open": "09:00",
+            "close": "21:00"
+          }
+        ],
+        "special_hours": {}
+      }
+    },
+    {
+      "id": "tianjin-branch-040",
+      "name": "跃进北路地铁站自助点",
+      "full_address": "天津市东丽区津滨大道辅路跃进北路地铁站A口后连航路停车场院内",
+      "short_address": "东丽区津滨大道辅路跃进北路地铁站A口后连航路停车场院内",
+      "phone": "17822066617",
+      "phones": [
+        "17822066617"
+      ],
+      "longitude": 117.317723,
+      "latitude": 39.114031,
+      "coordinate_accuracy": "高德GCJ-02坐标",
+      "source_rows": [
+        42
+      ],
+      "is_24_hours": false,
+      "business_hours": {
+        "timezone": "Asia/Shanghai",
+        "daily": [
+          {
+            "open": "09:00",
+            "close": "20:00"
+          }
+        ],
+        "special_hours": {}
+      }
+    },
+    {
+      "id": "tianjin-branch-041",
+      "name": "屿东城地铁站自助点",
+      "full_address": "天津市河东区屿东城地铁站E口龙江道方向行驶30米乐E停车场",
+      "short_address": "河东区屿东城地铁站E口龙江道方向行驶30米乐E停车场",
+      "phone": "17822601703",
+      "phones": [
+        "17822601703"
+      ],
+      "longitude": 117.279435,
+      "latitude": 39.148844,
+      "coordinate_accuracy": "高德GCJ-02坐标",
+      "source_rows": [
+        43
+      ],
+      "is_24_hours": false,
+      "business_hours": {
+        "timezone": "Asia/Shanghai",
+        "daily": [
+          {
+            "open": "08:00",
+            "close": "22:00"
+          }
+        ],
+        "special_hours": {}
+      }
+    },
+    {
+      "id": "tianjin-branch-042",
+      "name": "滨海机场服务点",
+      "full_address": "天津市东丽区滨海国际机场社会停车场交通中心B岛西侧",
+      "short_address": "东丽区滨海国际机场社会停车场交通中心B岛西侧",
+      "phone": "17822066617",
+      "phones": [
+        "17822066617"
+      ],
+      "longitude": 117.363285,
+      "latitude": 39.131064,
+      "coordinate_accuracy": "高德GCJ-02坐标",
+      "source_rows": [
+        44
+      ],
+      "is_24_hours": false,
+      "business_hours": {
+        "timezone": "Asia/Shanghai",
+        "daily": [
+          {
+            "open": "08:00",
+            "close": "21:00"
+          }
+        ],
+        "special_hours": {}
+      }
+    },
+    {
+      "id": "tianjin-branch-043",
+      "name": "世茂希尔顿酒店自助点",
+      "full_address": "天津市滨海新区动漫中路82号天津生态城世茂希尔顿酒店地面停车场",
+      "short_address": "滨海新区动漫中路82号天津生态城世茂希尔顿酒店地面停车场",
+      "phone": "17822066617",
+      "phones": [
+        "17822066617"
+      ],
+      "longitude": 117.74404,
+      "latitude": 39.12636,
+      "coordinate_accuracy": "高德GCJ-02坐标",
+      "source_rows": [
+        45
+      ],
+      "is_24_hours": false,
+      "business_hours": {
+        "timezone": "Asia/Shanghai",
+        "daily": [
+          {
+            "open": "09:00",
+            "close": "19:00"
+          }
+        ],
+        "special_hours": {}
+      }
+    },
+    {
+      "id": "tianjin-branch-044",
+      "name": "远洋未来汇自助点",
+      "full_address": "天津市滨海新区胡家园街道津塘公路7016号远洋未来汇地下停车场",
+      "short_address": "滨海新区胡家园街道津塘公路7016号远洋未来汇地下停车场",
+      "phone": "17822066617",
+      "phones": [
+        "17822066617"
+      ],
+      "longitude": 117.596956,
+      "latitude": 39.031467,
+      "coordinate_accuracy": "高德GCJ-02坐标",
+      "source_rows": [
+        46
+      ],
+      "is_24_hours": false,
+      "business_hours": {
+        "timezone": "Asia/Shanghai",
+        "daily": [
+          {
+            "open": "08:00",
+            "close": "21:00"
+          }
+        ],
+        "special_hours": {}
+      }
+    },
+    {
+      "id": "tianjin-branch-045",
+      "name": "滨海西站服务点",
+      "full_address": "天津市滨海新区万荣大道滨海西站南广场地下停车场C区",
+      "short_address": "滨海新区万荣大道滨海西站南广场地下停车场C区",
+      "phone": "17822066615",
+      "phones": [
+        "17822066615"
+      ],
+      "longitude": 117.610706,
+      "latitude": 39.078526,
+      "coordinate_accuracy": "高德GCJ-02坐标",
+      "source_rows": [
+        47
+      ],
+      "is_24_hours": false,
+      "business_hours": {
+        "timezone": "Asia/Shanghai",
+        "daily": [
+          {
+            "open": "08:00",
+            "close": "21:00"
+          }
+        ],
+        "special_hours": {}
+      }
+    },
+    {
+      "id": "tianjin-branch-046",
+      "name": "永丰港丽酒店服务点",
+      "full_address": "天津市滨海新区第二大街1号永丰港丽酒店东南门旁神州租车",
+      "short_address": "滨海新区第二大街1号永丰港丽酒店东南门旁神州租车",
+      "phone": "17822066615",
+      "phones": [
+        "17822066615"
+      ],
+      "longitude": 117.682378,
+      "latitude": 39.033414,
+      "coordinate_accuracy": "高德GCJ-02坐标",
+      "source_rows": [
+        48
+      ],
+      "is_24_hours": false,
+      "business_hours": {
+        "timezone": "Asia/Shanghai",
+        "daily": [
+          {
+            "open": "08:00",
+            "close": "21:00"
+          }
+        ],
+        "special_hours": {}
+      }
+    },
+    {
+      "id": "tianjin-branch-047",
+      "name": "开发区迪卡侬自助点",
+      "full_address": "天津市滨海新区奥运路与第四大街交口滨海时尚天街迪卡侬门前停车场",
+      "short_address": "滨海新区奥运路与第四大街交口滨海时尚天街迪卡侬门前停车场",
+      "phone": "17822066618",
+      "phones": [
+        "17822066618"
+      ],
+      "longitude": 117.721686,
+      "latitude": 39.030607,
+      "coordinate_accuracy": "高德GCJ-02坐标",
+      "source_rows": [
+        49
+      ],
+      "is_24_hours": false,
+      "business_hours": {
+        "timezone": "Asia/Shanghai",
+        "daily": [
+          {
+            "open": "09:00",
+            "close": "21:00"
+          }
+        ],
+        "special_hours": {}
+      }
+    },
+    {
+      "id": "tianjin-branch-048",
+      "name": "北塘古镇自助点",
+      "full_address": "天津市滨海新区北塘大街麦当劳停车场内",
+      "short_address": "滨海新区北塘大街麦当劳停车场内",
+      "phone": "17822066618",
+      "phones": [
+        "17822066618"
+      ],
+      "longitude": 117.660404,
+      "latitude": 39.053997,
+      "coordinate_accuracy": "高德GCJ-02坐标",
+      "source_rows": [
+        50
+      ],
+      "is_24_hours": false,
+      "business_hours": {
+        "timezone": "Asia/Shanghai",
+        "daily": [
+          {
+            "open": "08:00",
+            "close": "21:00"
+          }
+        ],
+        "special_hours": {}
+      }
+    },
+    {
+      "id": "tianjin-branch-049",
+      "name": "开发区华润万家自助点",
+      "full_address": "天津市滨海新区恂园东路与恂园南街交叉口东200米华润万家泰达店停车场",
+      "short_address": "滨海新区恂园东路与恂园南街交叉口东200米华润万家泰达店停车场",
+      "phone": "17822066618",
+      "phones": [
+        "17822066618"
+      ],
+      "longitude": 117.689151,
+      "latitude": 39.034024,
+      "coordinate_accuracy": "高德GCJ-02坐标",
+      "source_rows": [
+        51
+      ],
+      "is_24_hours": true,
+      "business_hours": {
+        "timezone": "Asia/Shanghai",
+        "daily": [
+          {
+            "open": "00:00",
+            "close": "00:00"
+          }
+        ],
+        "special_hours": {}
+      }
+    },
+    {
+      "id": "tianjin-branch-050",
+      "name": "滨海站服务点",
+      "full_address": "天津市滨海新区滨海站地下停车场B区",
+      "short_address": "滨海新区滨海站地下停车场B区",
+      "phone": "17822066619",
+      "phones": [
+        "17822066619"
+      ],
+      "longitude": 117.683658,
+      "latitude": 39.00662,
+      "coordinate_accuracy": "高德GCJ-02坐标",
+      "source_rows": [
+        52
+      ],
+      "is_24_hours": false,
+      "business_hours": {
+        "timezone": "Asia/Shanghai",
+        "daily": [
+          {
+            "open": "08:00",
+            "close": "21:00"
+          }
+        ],
+        "special_hours": {}
+      }
+    },
+    {
+      "id": "tianjin-branch-051",
+      "name": "秀谷商业广场自助点",
+      "full_address": "天津市滨海新区津塘公路和杭州道交口秀谷商业广场地下停车场及后院停车场内",
+      "short_address": "滨海新区津塘公路和杭州道交口秀谷商业广场地下停车场及后院停车场内",
+      "phone": "17822066619",
+      "phones": [
+        "17822066619"
+      ],
+      "longitude": 117.656212,
+      "latitude": 39.032003,
+      "coordinate_accuracy": "高德GCJ-02坐标",
+      "source_rows": [
+        53
+      ],
+      "is_24_hours": false,
+      "business_hours": {
+        "timezone": "Asia/Shanghai",
+        "daily": [
+          {
+            "open": "08:00",
+            "close": "21:00"
+          }
+        ],
+        "special_hours": {}
+      }
+    },
+    {
+      "id": "tianjin-branch-052",
+      "name": "津南建鑫城自助点",
+      "full_address": "天津市津南区建设二路与二八线交口香港建鑫城",
+      "short_address": "津南区建设二路与二八线交口香港建鑫城",
+      "phone": "17822066619",
+      "phones": [
+        "17822066619"
+      ],
+      "longitude": 117.325309,
+      "latitude": 38.944427,
+      "coordinate_accuracy": "高德GCJ-02坐标",
+      "source_rows": [
+        54
+      ],
+      "is_24_hours": false,
+      "business_hours": {
+        "timezone": "Asia/Shanghai",
+        "daily": [
+          {
+            "open": "09:00",
+            "close": "21:00"
+          }
+        ],
+        "special_hours": {}
+      }
+    },
+    {
+      "id": "tianjin-branch-053",
+      "name": "津南葛沽物美自助点",
+      "full_address": "天津市津南区金水街1号物美超市",
+      "short_address": "津南区金水街1号物美超市",
+      "phone": "17822068806",
+      "phones": [
+        "17822068806"
+      ],
+      "longitude": 117.499472,
+      "latitude": 38.990878,
+      "coordinate_accuracy": "高德GCJ-02坐标",
+      "source_rows": [
+        55
+      ],
+      "is_24_hours": false,
+      "business_hours": {
+        "timezone": "Asia/Shanghai",
+        "daily": [
+          {
+            "open": "09:00",
+            "close": "21:00"
+          }
+        ],
+        "special_hours": {}
+      }
+    },
+    {
+      "id": "tianjin-branch-054",
+      "name": "大寺人人乐自助点",
+      "full_address": "天津市西青区大寺镇芦北路22号渔夫码头休闲广场停车场",
+      "short_address": "西青区大寺镇芦北路22号渔夫码头休闲广场停车场",
+      "phone": "17822068806",
+      "phones": [
+        "17822068806"
+      ],
+      "longitude": 117.23021,
+      "latitude": 38.990351,
+      "coordinate_accuracy": "高德GCJ-02坐标",
+      "source_rows": [
+        56
+      ],
+      "is_24_hours": false,
+      "business_hours": {
+        "timezone": "Asia/Shanghai",
+        "daily": [
+          {
+            "open": "09:00",
+            "close": "21:00"
+          }
+        ],
+        "special_hours": {}
+      }
+    },
+    {
+      "id": "tianjin-branch-055",
+      "name": "津南永旺自助点",
+      "full_address": "天津市津南区鑫怡路与津沽公路交口永旺梦乐城地上停车场",
+      "short_address": "津南区鑫怡路与津沽公路交口永旺梦乐城地上停车场",
+      "phone": "17822066619",
+      "phones": [
+        "17822066619"
+      ],
+      "longitude": 117.353898,
+      "latitude": 39.015264,
+      "coordinate_accuracy": "高德GCJ-02坐标",
+      "source_rows": [
+        57
+      ],
+      "is_24_hours": true,
+      "business_hours": {
+        "timezone": "Asia/Shanghai",
+        "daily": [
+          {
+            "open": "00:00",
+            "close": "00:00"
+          }
+        ],
+        "special_hours": {}
+      }
+    },
+    {
+      "id": "tianjin-branch-056",
+      "name": "津南月坛酒店服务点",
+      "full_address": "天津市津南区津沽路月坛酒店停车场",
+      "short_address": "津南区津沽路月坛酒店停车场",
+      "phone": "17822066619",
+      "phones": [
+        "17822066619"
+      ],
+      "longitude": 117.386532,
+      "latitude": 38.987938,
+      "coordinate_accuracy": "高德GCJ-02坐标",
+      "source_rows": [
+        58
+      ],
+      "is_24_hours": false,
+      "business_hours": {
+        "timezone": "Asia/Shanghai",
+        "daily": [
+          {
+            "open": "08:00",
+            "close": "21:00"
+          }
+        ],
+        "special_hours": {}
+      }
+    },
+    {
+      "id": "tianjin-branch-057",
+      "name": "大港外国语学院自助点",
+      "full_address": "天津市滨海新区学府路与迎宾街交口东约150米",
+      "short_address": "滨海新区学府路与迎宾街交口东约150米",
+      "phone": "17822066615",
+      "phones": [
+        "17822066615"
+      ],
+      "longitude": 117.459961,
+      "latitude": 38.857304,
+      "coordinate_accuracy": "高德GCJ-02坐标",
+      "source_rows": [
+        59
+      ],
+      "is_24_hours": false,
+      "business_hours": {
+        "timezone": "Asia/Shanghai",
+        "daily": [
+          {
+            "open": "10:00",
+            "close": "18:00"
+          }
+        ],
+        "special_hours": {}
+      }
+    },
+    {
+      "id": "tianjin-branch-058",
+      "name": "津南领世郡南门自助点",
+      "full_address": "天津市津南区领世路与领世环路交口美车港对面停车场",
+      "short_address": "津南区领世路与领世环路交口美车港对面停车场",
+      "phone": "17822066615",
+      "phones": [
+        "17822066615"
+      ],
+      "longitude": 117.275812,
+      "latitude": 39.022969,
+      "coordinate_accuracy": "高德GCJ-02坐标",
+      "source_rows": [
+        60
+      ],
+      "is_24_hours": false,
+      "business_hours": {
+        "timezone": "Asia/Shanghai",
+        "daily": [
+          {
+            "open": "09:00",
+            "close": "21:00"
+          }
+        ],
+        "special_hours": {}
+      }
+    },
+    {
+      "id": "tianjin-branch-059",
+      "name": "汉沽东谷酒店自助点",
+      "full_address": "天津市滨海新区汉沽街道新开北路81号（东谷酒店院内停车场）",
+      "short_address": "滨海新区汉沽街道新开北路81号（东谷酒店院内停车场）",
+      "phone": "17822066616",
+      "phones": [
+        "17822066616"
+      ],
+      "longitude": 117.807908,
+      "latitude": 39.257044,
+      "coordinate_accuracy": "高德GCJ-02坐标",
+      "source_rows": [
+        61
+      ],
+      "is_24_hours": false,
+      "business_hours": {
+        "timezone": "Asia/Shanghai",
+        "daily": [
+          {
+            "open": "09:00",
+            "close": "19:00"
+          }
+        ],
+        "special_hours": {}
+      }
+    },
+    {
+      "id": "tianjin-branch-060",
+      "name": "宁河市民中心自助点",
+      "full_address": "天津市宁河区桥北街道市民中心前地上停车场",
+      "short_address": "宁河区桥北街道市民中心前地上停车场",
+      "phone": "17822066616",
+      "phones": [
+        "17822066616"
+      ],
+      "longitude": 117.813816,
+      "latitude": 39.3383,
+      "coordinate_accuracy": "高德GCJ-02坐标",
+      "source_rows": [
+        62
+      ],
+      "is_24_hours": false,
+      "business_hours": {
+        "timezone": "Asia/Shanghai",
+        "daily": [
+          {
+            "open": "08:00",
+            "close": "21:00"
+          }
+        ],
+        "special_hours": {}
+      }
+    },
+    {
+      "id": "tianjin-branch-061",
+      "name": "大港大剧院自助点",
+      "full_address": "天津市滨海新区迎宾街89号大港大剧院停车场",
+      "short_address": "滨海新区迎宾街89号大港大剧院停车场",
+      "phone": "17822066615",
+      "phones": [
+        "17822066615"
+      ],
+      "longitude": 117.466278,
+      "latitude": 38.840948,
+      "coordinate_accuracy": "高德GCJ-02坐标",
+      "source_rows": [
+        63
+      ],
+      "is_24_hours": false,
+      "business_hours": {
+        "timezone": "Asia/Shanghai",
+        "daily": [
+          {
+            "open": "10:00",
+            "close": "18:00"
+          }
+        ],
+        "special_hours": {}
+      }
+    },
+    {
+      "id": "tianjin-branch-062",
+      "name": "东丽体育公园自助点",
+      "full_address": "天津市东丽区张贵庄跃进路与先锋路交叉口西侧人民检察院对面停车场院内",
+      "short_address": "东丽区张贵庄跃进路与先锋路交叉口西侧人民检察院对面停车场院内",
+      "phone": "17822066616",
+      "phones": [
+        "17822066616"
+      ],
+      "longitude": 117.312399,
+      "latitude": 39.084634,
+      "coordinate_accuracy": "高德GCJ-02坐标",
+      "source_rows": [
+        64
+      ],
+      "is_24_hours": false,
+      "business_hours": {
+        "timezone": "Asia/Shanghai",
+        "daily": [
+          {
+            "open": "09:00",
+            "close": "20:00"
+          }
+        ],
+        "special_hours": {}
+      }
+    },
+    {
+      "id": "tianjin-branch-063",
+      "name": "西横堤瑞景自助点",
+      "full_address": "天津市北辰区地铁1号线瑞景新苑站B口旁瑞景商业中心物美超市地下停车场",
+      "short_address": "北辰区地铁1号线瑞景新苑站B口旁瑞景商业中心物美超市地下停车场",
+      "phone": "17822066616",
+      "phones": [
+        "17822066616"
+      ],
+      "longitude": 117.120216,
+      "latitude": 39.199436,
+      "coordinate_accuracy": "高德GCJ-02坐标",
+      "source_rows": [
+        65
+      ],
+      "is_24_hours": false,
+      "business_hours": {
+        "timezone": "Asia/Shanghai",
+        "daily": [
+          {
+            "open": "08:00",
+            "close": "21:00"
+          }
+        ],
+        "special_hours": {}
+      }
+    },
+    {
+      "id": "tianjin-branch-064",
+      "name": "蓟州新城国际自助点",
+      "full_address": "天津市蓟州区南环路与中昌北大道交叉口西80米",
+      "short_address": "蓟州区南环路与中昌北大道交叉口西80米",
+      "phone": "17822066616",
+      "phones": [
+        "17822066616"
+      ],
+      "longitude": 117.417873,
+      "latitude": 40.023531,
+      "coordinate_accuracy": "高德GCJ-02坐标",
+      "source_rows": [
+        66
+      ],
+      "is_24_hours": false,
+      "business_hours": {
+        "timezone": "Asia/Shanghai",
+        "daily": [
+          {
+            "open": "08:00",
+            "close": "21:00"
+          }
+        ],
         "special_hours": {}
       }
     }
